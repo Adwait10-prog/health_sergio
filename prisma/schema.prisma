@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String?
+  created_at DateTime @default(now())
+
+  dailyLogs      DailyLog[]
+  technicalLogs  TechnicalLog[]
+  founderLogs    FounderLog[]
+  financeLogs    FinanceLog[]
+  reflections    Reflection[]
+  tasks          Task[]
+  monthlyReviews MonthlyReview[]
+  adjustments      ClaudeAdjustment[]
+  stravaToken      StravaToken?
+  stravaActivities StravaActivity[]
+}
+
+model DailyLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  date   DateTime
+
+  weightKg     Float?
+  sleepMin     Int?
+  rhrBpm       Int?
+  energyLevel  Int?
+  stressLevel  Int?
+  moodScore    Int?
+  anxietyLevel Int?
+
+  didWorkout  Boolean @default(false)
+  didRead     Boolean @default(false)
+  didCode     Boolean @default(false)
+  didJournal  Boolean @default(false)
+  didMeditate Boolean @default(false)
+  didNetwork  Boolean @default(false)
+  didLearn    Boolean @default(false)
+
+  deepWorkMin      Int?
+  distractionCount Int?
+  tasksPlanned     Int?
+  tasksCompleted   Int?
+
+  kcal         Int?
+  proteinG     Int?
+  waterL       Float?
+  alcoholUnits Int?
+
+  disciplineScore Float?
+  momentumScore   Float?
+
+  notes    String?
+  loggedAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model TechnicalLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  date   DateTime
+
+  hoursCodedMin      Int?
+  featuresShipped    Int?
+  bugsFixed          Int?
+  apisIntegrated     Int?
+  codeReviewsDone    Int?
+  prsOpened          Int?
+  prsMerged          Int?
+
+  aiAgentsBuilt      Int?
+  modelsExperimented Int?
+  promptsEngineered  Int?
+  automationsCreated Int?
+
+  mvpsBuilt         Int?
+  pocsCreated       Int?
+  userFeedbackItems Int?
+
+  systemDesignsDone Int?
+  archDecisionsMade Int?
+
+  notes    String?
+  loggedAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model FounderLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  date   DateTime
+
+  newPeopleMet         Int?
+  highValueConnections Int?
+  followUpsDone        Int?
+  coffeeChats          Int?
+  eventsAttended       Int?
+
+  linkedinFollowers   Int?
+  linkedinImpressions Int?
+  linkedinPosts       Int?
+
+  ideasResearched    Int?
+  validationCalls    Int?
+  competitorAnalyses Int?
+  pitchesPrepared    Int?
+  investorOutreach   Int?
+
+  cofoundersMet        Int?
+  advisorsAdded        Int?
+  partnershipsExplored Int?
+
+  notes    String?
+  loggedAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model FinanceLog {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  date   DateTime
+
+  salaryInr            Float?
+  freelanceInr         Float?
+  sideProjectInr       Float?
+  investmentReturnsInr Float?
+
+  netWorthInr         Float?
+  savingsInr          Float?
+  monthlySavingsInr   Float?
+  sipContributionsInr Float?
+  emergencyFundMonths Float?
+  liquidCashInr       Float?
+
+  equityPortfolioInr Float?
+  goldInr            Float?
+  mutualFundsInr     Float?
+  cagrPct            Float?
+  passiveIncomeInr   Float?
+
+  personalRunwayMonths Float?
+  burnRateInr          Float?
+  startupCapitalInr    Float?
+  fiProgressPct        Float?
+
+  notes    String?
+  loggedAt DateTime @default(now())
+
+  @@unique([userId, date])
+}
+
+model Reflection {
+  id     String   @id @default(cuid())
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  date   DateTime
+  type   String
+
+  journalText    String?
+  lessonsLearned String?
+  gratitudeItems String?
+
+  weeklyWins    String?
+  weeklyMisses  String?
+  nextWeekFocus String?
+  weeklyScore   Int?
+
+  amProudScore    Int?
+  goalAlignPct    Int?
+  identityActions Int?
+
+  loggedAt DateTime @default(now())
+
+  @@unique([userId, date, type])
+}
+
+model MonthlyReview {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  month  String
+
+  leadershipScore     Int?
+  confidenceScore     Int?
+  communicationScore  Int?
+  technicalDepthScore Int?
+  decisionMakingScore Int?
+  disciplineScore     Int?
+
+  ctoScore     Float?
+  founderScore Float?
+  overallScore Float?
+
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, month])
+}
+
+model Task {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  title       String
+  description String?
+  section     String
+  priority    String   @default("medium")
+  status      String   @default("todo")
+  dueDate     DateTime?
+  doneAt      DateTime?
+  isToday     Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ClaudeAdjustment {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  briefSent      String
+  responseRaw    String
+  responseJson   String?
+  appliedChanges String?
+
+  createdAt DateTime @default(now())
+}
+
+model StravaToken {
+  id           String @id @default(cuid())
+  userId       String @unique
+  user         User   @relation(fields: [userId], references: [id])
+
+  accessToken  String
+  refreshToken String
+  expiresAt    Int    // unix timestamp
+
+  updatedAt DateTime @updatedAt
+}
+
+model StravaActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  stravaId    String   @unique
+  date        DateTime
+
+  name        String
+  type        String   // Run, Ride, Swim, WeightTraining, etc.
+  distanceM   Float?   // metres
+  movingTimeSec Int?
+  elapsedTimeSec Int?
+  totalElevationM Float?
+  avgSpeedMps Float?
+  avgHeartRate Int?
+  maxHeartRate Int?
+  calories     Int?
+  kudosCount   Int?
+  sufferScore  Int?
+
+  rawJson     String   // full Strava activity JSON
+
+  syncedAt    DateTime @default(now())
+  @@index([userId, date])
+}
