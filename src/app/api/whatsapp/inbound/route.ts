@@ -4,6 +4,7 @@ import { getUserId } from "@/lib/user";
 import { parseWhatsAppMessage, generateWeekSummary } from "@/lib/whatsapp";
 import { transcribeWhatsAppAudio, parseVoiceTranscript } from "@/lib/voiceNote";
 import { queryMemory } from "@/lib/memoryQuery";
+import { createCalendarEvent } from "@/lib/googleCalendar";
 import twilio from "twilio";
 import { subDays } from "date-fns";
 
@@ -390,6 +391,8 @@ export async function POST(req: NextRequest) {
         const title    = d.title    as string;
         const priority = (d.priority as string) || "medium";
         const section  = (d.section  as string) || "work";
+        const time     = d.time as string | null | undefined;
+
         // Always use server-side date — never trust the parser for dates
         await db.task.create({
           data: {
@@ -403,7 +406,21 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        await sendReply(from, parsed.reply || `✅ Added: ${title}`);
+        // If a time was mentioned, also create a Google Calendar event
+        let calendarNote = "";
+        if (time) {
+          const link = await createCalendarEvent({
+            title,
+            date: today,
+            timeStr: time,
+            reminderMinutes: 60,
+          });
+          calendarNote = link
+            ? `\n📅 Calendar event created for ${time} (1hr reminder set)`
+            : `\n⚠️ Task saved but couldn't create calendar event`;
+        }
+
+        await sendReply(from, (parsed.reply || `✅ Added: ${title}`) + calendarNote);
         break;
       }
 
