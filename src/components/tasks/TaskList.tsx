@@ -78,6 +78,10 @@ export default function TaskList({
   const visible = tasks.filter((t) => t.status !== "cancelled");
   const active = visible.filter((t) => t.status !== "done");
   const done = visible.filter((t) => t.status === "done");
+  // Show only last 5 done tasks, rest hidden behind scroll
+  const DONE_VISIBLE = 5;
+  const doneVisible = done.slice(-DONE_VISIBLE);
+  const doneHidden = done.length - doneVisible.length;
 
   return (
     <div className="flex flex-col gap-1">
@@ -91,10 +95,15 @@ export default function TaskList({
         <TaskItem key={t.id} task={t} showSection={showSection} onUpdate={handleUpdate} />
       ))}
 
-      {/* Done tasks (collapsed count or list) */}
+      {/* Done tasks — last 5 visible, rest scrollable */}
       {done.length > 0 && (
         <div className="mt-1 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
-          {done.map((t) => (
+          {doneHidden > 0 && (
+            <p className="text-xs py-1 px-1" style={{ color: "var(--text-muted)" }}>
+              +{doneHidden} more completed
+            </p>
+          )}
+          {doneVisible.map((t) => (
             <TaskItem key={t.id} task={t} showSection={showSection} onUpdate={handleUpdate} />
           ))}
         </div>
