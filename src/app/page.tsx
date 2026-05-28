@@ -4,6 +4,7 @@ import { calcDisciplineScore, calcMomentumScore, calcWeeklyCTOScore, calcWeeklyF
 import { startOfDay, startOfWeek, subDays, format } from "date-fns";
 import { todayUTC, yesterdayUTC, daysAgoUTC } from "@/lib/date";
 import { getTodayHMSession, getCurrentWeekHMStats, getRaceCountdown } from "@/lib/hmTracker";
+import { getPatternInsights } from "@/lib/patternInsights";
 import ScoreRing from "@/components/today/ScoreRing";
 import HabitStreaks from "@/components/today/HabitStreaks";
 import DeepWorkTimer from "@/components/today/DeepWorkTimer";
@@ -89,10 +90,11 @@ export default async function TodayPage() {
   const momentumScore   = calcMomentumScore(enrichedYesterday);
   const ctoScore        = calcWeeklyCTOScore(weekTechLogs);
   const founderScore    = calcWeeklyFounderScore(weekFounderLogs);
-  const [todayHMSession, weekHMStats, raceCountdown] = await Promise.all([
+  const [todayHMSession, weekHMStats, raceCountdown, patternInsights] = await Promise.all([
     getTodayHMSession(),
     getCurrentWeekHMStats(),
     getRaceCountdown(),
+    getPatternInsights(userId),
   ]);
 
   // 4-week mileage buckets
@@ -320,6 +322,12 @@ export default async function TodayPage() {
 
           {/* Vitals snapshot */}
           <YesterdayRecap log={todayLog ?? yesterdayLog} label={todayLog ? "Today's vitals" : "Yesterday's vitals"} />
+
+          {/* Pattern Insights */}
+          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--c-founder)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>💡 Coach Insights · 30 days</div>
+            <p style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.6, margin: 0 }}>{patternInsights}</p>
+          </div>
 
           {/* Tasks */}
           <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
