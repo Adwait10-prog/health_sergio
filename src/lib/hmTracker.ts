@@ -49,7 +49,7 @@ export async function getTodayHMSession(): Promise<HMSessionWithLog | null> {
       where: {
         userId: USER_ID,
         date: { gte: todayUtc, lt: tomorrowUtc },
-        type: { in: ["Run", "TrailRun"] },
+        type: { in: ["Run", "TrailRun", "WeightTraining", "Workout", "Swim"] },
       },
     }),
   ]);
