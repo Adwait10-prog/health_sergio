@@ -285,20 +285,7 @@ export async function POST(req: NextRequest) {
         const title    = d.title    as string;
         const priority = (d.priority as string) || "medium";
         const section  = (d.section  as string) || "work";
-        // Parse dueDate but discard it if it's in the past (parser hallucination)
-        let dueDate: Date | null = null;
-        if (d.dueDate) {
-          const parsed = new Date(d.dueDate as string);
-          if (!isNaN(parsed.getTime()) && parsed >= today) {
-            dueDate = parsed;
-          }
-        }
-
-        // Mark isToday if dueDate is today or no dueDate (WhatsApp tasks default to today)
-        const todayStr = today.toISOString().split("T")[0];
-        const dueDateStr = dueDate ? dueDate.toISOString().split("T")[0] : null;
-        const isToday = !dueDateStr || dueDateStr === todayStr;
-
+        // Always use server-side date — never trust the parser for dates
         await db.task.create({
           data: {
             userId,
@@ -306,8 +293,8 @@ export async function POST(req: NextRequest) {
             priority,
             section,
             status: "todo",
-            isToday,
-            ...(dueDate && { dueDate }),
+            isToday: true,
+            dueDate: today,
           },
         });
 

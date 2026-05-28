@@ -59,8 +59,8 @@ Respond ONLY with valid JSON:
     // For add_task:
     //   title: the task as a clean, actionable string (e.g. "Send deck to Aryan")
     //   priority: "high" | "medium" | "low" — infer from urgency words (urgent/asap/today = high, else medium)
-    //   dueDate: ISO date string if a date/time is mentioned (e.g. "today", "tomorrow", "Friday", "3pm today") or null
     //   section: one of "work" | "fitness" | "personal" | "learning" — infer from context
+    //   NOTE: do NOT extract dueDate — the server handles dates
     //
     // For query_tasks:
     //   filter: "today" | "all" | "high" — infer from message ("today's tasks", "urgent", "everything")
@@ -88,13 +88,13 @@ Examples:
   → intent: query_week
 
 - "remind me to send the deck to Aryan"
-  → intent: add_task, title: "Send deck to Aryan", priority: "medium", dueDate: null, section: "work"
+  → intent: add_task, title: "Send deck to Aryan", priority: "medium", section: "work"
 
 - "add task follow up with DG Futurtech by Friday"
-  → intent: add_task, title: "Follow up with DG Futurtech", priority: "medium", dueDate: "2026-05-29", section: "work"
+  → intent: add_task, title: "Follow up with DG Futurtech", priority: "medium", section: "work"
 
 - "urgent — need to review the lead gen code today"
-  → intent: add_task, title: "Review lead gen code", priority: "high", dueDate: "<today's date>", section: "work"
+  → intent: add_task, title: "Review lead gen code", priority: "high", section: "work"
 
 - "what are my tasks today?" / "what's pending?" / "show my to do list"
   → intent: query_tasks, filter: "today"
