@@ -2,12 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
 import { calcDisciplineScore, calcMomentumScore } from "@/lib/scores";
-import { startOfDay } from "date-fns";
+
+// Returns midnight IST as UTC — matches how all dates are stored in DB
+function todayIST(): Date {
+  const now = new Date();
+  const istMs = now.getTime() + 5.5 * 60 * 60 * 1000;
+  const dateStr = new Date(istMs).toISOString().split("T")[0];
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d) - 5.5 * 60 * 60 * 1000);
+}
 
 export async function POST(req: NextRequest) {
   const userId = getUserId();
   const body = await req.json();
-  const date = startOfDay(body.date ? new Date(body.date) : new Date());
+  // Use IST-aware date — never use startOfDay(new Date()) which is UTC
+  const date = body.date ? (() => {
+    const [y, m, d] = body.date.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d) - 5.5 * 60 * 60 * 1000);
+  })() : todayIST();
 
   const data = {
     weightKg: body.weightKg ?? undefined,
