@@ -40,17 +40,32 @@ export async function getTodayHMSession(): Promise<HMSessionWithLog | null> {
     istDateStr(new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000 + 86400000))
   );
 
-  const session = await db.hMSession.findFirst({
-    where: { userId: USER_ID, date: { gte: todayUtc, lt: tomorrowUtc } },
-    include: { log: true },
-  });
+  const [session, stravaToday] = await Promise.all([
+    db.hMSession.findFirst({
+      where: { userId: USER_ID, date: { gte: todayUtc, lt: tomorrowUtc } },
+      include: { log: true },
+    }),
+    db.stravaActivity.findFirst({
+      where: {
+        userId: USER_ID,
+        date: { gte: todayUtc, lt: tomorrowUtc },
+        type: { in: ["Run", "TrailRun"] },
+      },
+    }),
+  ]);
 
   if (!session) return null;
+
+  // If no manual log but Strava has a run today — treat as done
+  const stravaLogStatus = stravaToday ? "done" : null;
+  const stravaKm = stravaToday ? Math.round((stravaToday.distanceM ?? 0) / 100) / 10 : null;
+  const stravaMin = stravaToday ? Math.round((stravaToday.movingTimeSec ?? 0) / 60) : null;
+
   return {
     ...session,
-    logStatus: session.log?.status ?? null,
-    actualKm: session.log?.actualKm ?? null,
-    actualMin: session.log?.actualMin ?? null,
+    logStatus: session.log?.status ?? stravaLogStatus,
+    actualKm: session.log?.actualKm ?? stravaKm,
+    actualMin: session.log?.actualMin ?? stravaMin,
     effort: session.log?.effort ?? null,
   };
 }
