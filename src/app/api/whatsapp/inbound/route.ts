@@ -279,6 +279,63 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      // ── Add task ───────────────────────────────────────────────────
+      case "add_task": {
+        const d = parsed.data;
+        const title    = d.title    as string;
+        const priority = (d.priority as string) || "medium";
+        const section  = (d.section  as string) || "work";
+        const dueDate  = d.dueDate  ? new Date(d.dueDate as string) : null;
+
+        await db.task.create({
+          data: {
+            userId,
+            title,
+            priority,
+            section,
+            status: "todo",
+            ...(dueDate && { dueDate }),
+          },
+        });
+
+        await sendReply(from, parsed.reply || `✅ Added: ${title}`);
+        break;
+      }
+
+      // ── Query tasks ────────────────────────────────────────────────
+      case "query_tasks": {
+        const filter = parsed.data.filter as string ?? "today";
+
+        const tasks = await db.task.findMany({
+          where: {
+            userId,
+            status: { in: ["todo", "in_progress"] },
+            ...(filter === "high" && { priority: "high" }),
+          },
+          orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+          take: 15,
+          select: { title: true, priority: true, section: true, dueDate: true, status: true },
+        });
+
+        if (tasks.length === 0) {
+          await sendReply(from, "No open tasks right now 🎉 You're all clear!");
+          break;
+        }
+
+        // Group by priority
+        const high   = tasks.filter(t => t.priority === "high");
+        const medium = tasks.filter(t => t.priority === "medium");
+        const low    = tasks.filter(t => t.priority === "low");
+
+        let reply = `📋 Your open tasks (${tasks.length}):\n`;
+        if (high.length)   reply += `\n🔴 High\n${high.map(t => `• ${t.title}`).join("\n")}`;
+        if (medium.length) reply += `\n🟡 Medium\n${medium.map(t => `• ${t.title}`).join("\n")}`;
+        if (low.length)    reply += `\n⚪ Low\n${low.map(t => `• ${t.title}`).join("\n")}`;
+
+        await sendReply(from, reply.trim());
+        break;
+      }
+
       // ── Unknown ────────────────────────────────────────────────────
       default: {
         await sendReply(from,

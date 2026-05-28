@@ -12,6 +12,8 @@ export interface ParsedMessage {
     | "habits"         // habit check-in (non-workout)
     | "query_today"    // "how am I doing today?"
     | "query_week"     // "how was my week?"
+    | "add_task"       // "remind me to X" / "add task: Y"
+    | "query_tasks"    // "what are my tasks?" / "what's pending?"
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -25,7 +27,7 @@ Your job: figure out WHAT he's saying and extract the right fields.
 
 Respond ONLY with valid JSON:
 {
-  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "unknown",
+  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "unknown",
   "data": {
     // For journal:
     //   journalText: the full journal entry as-is (preserve his words exactly)
@@ -53,6 +55,15 @@ Respond ONLY with valid JSON:
     //
     // For habits:
     //   done: array of habits from ["read","meditate","code","learn","network","journal"]
+    //
+    // For add_task:
+    //   title: the task as a clean, actionable string (e.g. "Send deck to Aryan")
+    //   priority: "high" | "medium" | "low" — infer from urgency words (urgent/asap/today = high, else medium)
+    //   dueDate: ISO date string if a date/time is mentioned (e.g. "today", "tomorrow", "Friday", "3pm today") or null
+    //   section: one of "work" | "fitness" | "personal" | "learning" — infer from context
+    //
+    // For query_tasks:
+    //   filter: "today" | "all" | "high" — infer from message ("today's tasks", "urgent", "everything")
   },
   "reply": "warm, personal 1-2 line reply. Acknowledge what he shared. Use his name occasionally. Be like a thoughtful friend, not a bot. Use emojis sparingly."
 }
@@ -76,7 +87,23 @@ Examples:
 - "how am i doing this week?"
   → intent: query_week
 
-IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.`;
+- "remind me to send the deck to Aryan"
+  → intent: add_task, title: "Send deck to Aryan", priority: "medium", dueDate: null, section: "work"
+
+- "add task follow up with DG Futurtech by Friday"
+  → intent: add_task, title: "Follow up with DG Futurtech", priority: "medium", dueDate: "2026-05-29", section: "work"
+
+- "urgent — need to review the lead gen code today"
+  → intent: add_task, title: "Review lead gen code", priority: "high", dueDate: "<today's date>", section: "work"
+
+- "what are my tasks today?" / "what's pending?" / "show my to do list"
+  → intent: query_tasks, filter: "today"
+
+- "show all my tasks" / "what's everything I have to do?"
+  → intent: query_tasks, filter: "all"
+
+IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.
+IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.`;
 
 export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage> {
   try {
