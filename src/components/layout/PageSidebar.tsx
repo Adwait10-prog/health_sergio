@@ -36,9 +36,11 @@ export default async function PageSidebar({ section, accentColor }: Props) {
     }),
   ]);
 
-  const todaySession = getTodayHMSession();
-  const daysToRace   = getRaceCountdown();
-  const weekStats    = getCurrentWeekHMStats();
+  const [todaySession, daysToRace, weekStats] = await Promise.all([
+    getTodayHMSession(),
+    getRaceCountdown(),
+    getCurrentWeekHMStats(),
+  ]);
 
   const card: React.CSSProperties = {
     background: "var(--surface)",

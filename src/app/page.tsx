@@ -83,9 +83,11 @@ export default async function TodayPage() {
   const momentumScore   = calcMomentumScore(enrichedYesterday);
   const ctoScore        = calcWeeklyCTOScore(weekTechLogs);
   const founderScore    = calcWeeklyFounderScore(weekFounderLogs);
-  const todayHMSession  = getTodayHMSession();
-  const weekHMStats     = getCurrentWeekHMStats();
-  const raceCountdown   = getRaceCountdown();
+  const [todayHMSession, weekHMStats, raceCountdown] = await Promise.all([
+    getTodayHMSession(),
+    getCurrentWeekHMStats(),
+    getRaceCountdown(),
+  ]);
 
   // 4-week mileage buckets
   type WeekBucket = { label: string; km: number; targetKm: number };

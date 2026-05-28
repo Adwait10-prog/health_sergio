@@ -1,27 +1,27 @@
-import Database from "better-sqlite3";
-import path from "path";
+import { db } from "@/lib/db";
 
-// process.cwd() is the project root both in dev (Next.js) and during build
-const HM_DB_PATH = path.resolve(process.cwd(), "../hm-tracker/dev.db");
+// Returns IST date string YYYY-MM-DD
+function istDateStr(d = new Date()): string {
+  const istMs = d.getTime() + 5.5 * 60 * 60 * 1000;
+  return new Date(istMs).toISOString().split("T")[0];
+}
 
-// Returns local date as YYYY-MM-DD — avoids UTC offset issues (sessions stored at 18:30Z = midnight IST)
-function localDateStr(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+// Returns midnight IST as UTC (how sessions are stored)
+function istToUtc(dateStr: string): Date {
+  const [y, m, day] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, day) - 5.5 * 60 * 60 * 1000);
 }
 
 export interface HMSession {
   id: string;
-  date: string;
+  date: Date;
   weekNum: number;
   dayOfWeek: string;
   type: string;
   name: string;
   targetKm: number | null;
   targetMin: number | null;
-  isCutback: number;
+  isCutback: boolean;
 }
 
 export interface HMSessionWithLog extends HMSession {
@@ -31,96 +31,97 @@ export interface HMSessionWithLog extends HMSession {
   effort: number | null;
 }
 
-function openDb(): Database.Database | null {
-  try {
-    return new Database(HM_DB_PATH, { readonly: true, fileMustExist: true });
-  } catch {
-    return null;
-  }
+const USER_ID = process.env.USER_ID!;
+
+export async function getTodayHMSession(): Promise<HMSessionWithLog | null> {
+  const todayStr = istDateStr();
+  const todayUtc = istToUtc(todayStr);
+  const tomorrowUtc = istToUtc(
+    istDateStr(new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000 + 86400000))
+  );
+
+  const session = await db.hMSession.findFirst({
+    where: { userId: USER_ID, date: { gte: todayUtc, lt: tomorrowUtc } },
+    include: { log: true },
+  });
+
+  if (!session) return null;
+  return {
+    ...session,
+    logStatus: session.log?.status ?? null,
+    actualKm: session.log?.actualKm ?? null,
+    actualMin: session.log?.actualMin ?? null,
+    effort: session.log?.effort ?? null,
+  };
 }
 
-export function getTodayHMSession(): HMSessionWithLog | null {
-  const db = openDb();
-  if (!db) return null;
-  try {
-    const today = localDateStr();
-    const row = db
-      .prepare(
-        `SELECT s.*, sl.status as logStatus, sl.actualKm, sl.actualMin, sl.effort
-         FROM Session s
-         LEFT JOIN SessionLog sl ON sl.sessionId = s.id
-         WHERE date(s.date, '+5 hours', '30 minutes') = ?
-         LIMIT 1`
-      )
-      .get(today) as HMSessionWithLog | undefined;
-    return row ?? null;
-  } finally {
-    db.close();
-  }
+export async function getLast7HMSessions(): Promise<HMSessionWithLog[]> {
+  const todayStr = istDateStr();
+  const todayUtc = istToUtc(todayStr);
+  const sixDaysAgoUtc = new Date(todayUtc.getTime() - 6 * 864e5);
+
+  const sessions = await db.hMSession.findMany({
+    where: { userId: USER_ID, date: { gte: sixDaysAgoUtc, lte: todayUtc } },
+    include: { log: true },
+    orderBy: { date: "asc" },
+  });
+
+  return sessions.map(s => ({
+    ...s,
+    logStatus: s.log?.status ?? null,
+    actualKm: s.log?.actualKm ?? null,
+    actualMin: s.log?.actualMin ?? null,
+    effort: s.log?.effort ?? null,
+  }));
 }
 
-export function getLast7HMSessions(): HMSessionWithLog[] {
-  const db = openDb();
-  if (!db) return [];
-  try {
-    const today = localDateStr();
-    const sixDaysAgo = localDateStr(new Date(Date.now() - 6 * 864e5));
-    const rows = db
-      .prepare(
-        `SELECT s.*, sl.status as logStatus, sl.actualKm, sl.actualMin, sl.effort
-         FROM Session s
-         LEFT JOIN SessionLog sl ON sl.sessionId = s.id
-         WHERE date(s.date, '+5 hours', '30 minutes') >= ?
-         AND   date(s.date, '+5 hours', '30 minutes') <= ?
-         ORDER BY s.date ASC`
-      )
-      .all(sixDaysAgo, today) as HMSessionWithLog[];
-    return rows;
-  } finally {
-    db.close();
-  }
-}
-
-export function getCurrentWeekHMStats(): {
+export async function getCurrentWeekHMStats(): Promise<{
   weekNum: number;
   targetKm: number;
   doneKm: number;
   sessions: HMSessionWithLog[];
-} {
-  const db = openDb();
-  if (!db) return { weekNum: 0, targetKm: 0, doneKm: 0, sessions: [] };
-  try {
-    // Find current week number from today's session (IST-adjusted)
-    const today = localDateStr();
-    const todayRow = db
-      .prepare(`SELECT weekNum FROM Session WHERE date(date, '+5 hours', '30 minutes') = ? LIMIT 1`)
-      .get(today) as { weekNum: number } | undefined;
+}> {
+  const todayStr = istDateStr();
+  const todayUtc = istToUtc(todayStr);
 
-    const weekNum = todayRow?.weekNum ?? 0;
+  // Find today's session to get week number
+  const tomorrowUtc = new Date(todayUtc.getTime() + 864e5);
+  const todaySession = await db.hMSession.findFirst({
+    where: { userId: USER_ID, date: { gte: todayUtc, lt: tomorrowUtc } },
+  });
 
-    const sessions = db
-      .prepare(
-        `SELECT s.*, sl.status as logStatus, sl.actualKm, sl.actualMin, sl.effort
-         FROM Session s
-         LEFT JOIN SessionLog sl ON sl.sessionId = s.id
-         WHERE s.weekNum = ?
-         ORDER BY s.date ASC`
-      )
-      .all(weekNum) as HMSessionWithLog[];
+  if (!todaySession) return { weekNum: 0, targetKm: 0, doneKm: 0, sessions: [] };
 
-    const targetKm = sessions.reduce((sum, s) => sum + (s.targetKm ?? 0), 0);
-    const doneKm = sessions
-      .filter((s) => s.logStatus === "done" || s.logStatus === "partial")
-      .reduce((sum, s) => sum + (s.actualKm ?? s.targetKm ?? 0), 0);
+  const weekNum = todaySession.weekNum;
 
-    return { weekNum, targetKm, doneKm, sessions };
-  } finally {
-    db.close();
-  }
+  const sessions = await db.hMSession.findMany({
+    where: { userId: USER_ID, weekNum },
+    include: { log: true },
+    orderBy: { date: "asc" },
+  });
+
+  const targetKm = sessions.reduce((sum, s) => sum + (s.targetKm ?? 0), 0);
+  const doneKm = sessions
+    .filter(s => s.log?.status === "done")
+    .reduce((sum, s) => sum + (s.log?.actualKm ?? s.targetKm ?? 0), 0);
+
+  return {
+    weekNum,
+    targetKm: Math.round(targetKm * 10) / 10,
+    doneKm: Math.round(doneKm * 10) / 10,
+    sessions: sessions.map(s => ({
+      ...s,
+      logStatus: s.log?.status ?? null,
+      actualKm: s.log?.actualKm ?? null,
+      actualMin: s.log?.actualMin ?? null,
+      effort: s.log?.effort ?? null,
+    })),
+  };
 }
 
-export function getRaceCountdown(): number {
-  const race = new Date("2026-10-18T00:00:00");
+export async function getRaceCountdown(): Promise<number> {
+  const raceDate = new Date("2026-10-18T00:00:00.000Z");
   const now = new Date();
-  return Math.max(0, Math.ceil((race.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+  const diffMs = raceDate.getTime() - now.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }

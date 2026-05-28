@@ -41,11 +41,13 @@ const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default async function FitnessPage() {
   const userId          = getUserId();
-  const today           = getTodayHMSession();
-  const last7           = getLast7HMSessions();
-  const weekStats       = getCurrentWeekHMStats();
-  const daysToRace      = getRaceCountdown();
-  const stravaConnected = await isStravaConnected();
+  const [today, last7, weekStats, daysToRace, stravaConnected] = await Promise.all([
+    getTodayHMSession(),
+    getLast7HMSessions(),
+    getCurrentWeekHMStats(),
+    getRaceCountdown(),
+    isStravaConnected(),
+  ]);
 
   // All Strava activities (all time for charts)
   const allActivities = await db.stravaActivity.findMany({
@@ -259,7 +261,7 @@ export default async function FitnessPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-1)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
                       <p style={{ fontSize: 10, color: "var(--text-4)", margin: "1px 0 0" }}>
-                        {format(parseISO(s.date), "EEE d MMM")}
+                        {format(new Date(s.date), "EEE d MMM")}
                       </p>
                     </div>
                     {typeChip(s.type)}

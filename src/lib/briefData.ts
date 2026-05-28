@@ -104,9 +104,11 @@ export async function fetchBriefData() {
   const journalStreak = last7Reflections.length;
 
   // HM training data
-  const todaySession = getTodayHMSession();
-  const daysToRace = getRaceCountdown();
-  const weekStats = getCurrentWeekHMStats();
+  const [todaySession, daysToRace, weekStats] = await Promise.all([
+    getTodayHMSession(),
+    getRaceCountdown(),
+    getCurrentWeekHMStats(),
+  ]);
 
   // Habit streak summary (just counts, not full history)
   const habitCounts = {

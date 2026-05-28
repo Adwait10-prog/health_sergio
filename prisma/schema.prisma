@@ -23,6 +23,8 @@ model User {
   adjustments      ClaudeAdjustment[]
   stravaToken      StravaToken?
   stravaActivities StravaActivity[]
+  hmSessions       HMSession[]
+  hmSessionLogs    HMSessionLog[]
 }
 
 model DailyLog {
@@ -244,6 +246,44 @@ model ClaudeAdjustment {
   appliedChanges String?
 
   createdAt DateTime @default(now())
+}
+
+model HMSession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  date        DateTime
+  weekNum     Int
+  dayOfWeek   String
+  type        String   // gym_lc|gym_ub|gym_fb_light|easy|quality|long|swim|rest|race
+  name        String
+  targetKm    Float?
+  targetMin   Int?
+  notes       String?
+  isCutback   Boolean  @default(false)
+  isModified  Boolean  @default(false)
+
+  log         HMSessionLog?
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model HMSessionLog {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique
+  session     HMSession @relation(fields: [sessionId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  status      String   // done|partial|skipped
+  actualKm    Float?
+  actualMin   Int?
+  avgHr       Int?
+  effort      Int?
+  notes       String?
+
+  loggedAt    DateTime @default(now())
 }
 
 model StravaToken {
