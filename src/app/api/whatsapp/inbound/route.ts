@@ -479,15 +479,28 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // Find matching open task by keyword search
+        // Fetch all open tasks
         const tasks = await db.task.findMany({
           where: { userId, status: { in: ["todo", "in_progress"] } },
           select: { id: true, title: true },
         });
 
-        const match = tasks.find(t =>
-          t.title.toLowerCase().includes(keyword)
-        );
+        // Split keyword into individual words, filter out stop words
+        const stopWords = new Set(["the", "a", "an", "is", "are", "was", "on", "in", "at", "to", "for", "of", "and", "or", "from", "with", "task", "completed", "done", "finish", "finished"]);
+        const words = keyword.split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+
+        // Score each task by how many keywords appear in the title
+        const scored = tasks.map(t => {
+          const title = t.title.toLowerCase();
+          // Exact phrase match gets highest score
+          if (title.includes(keyword)) return { task: t, score: 100 };
+          // Word-by-word match
+          const score = words.filter(w => title.includes(w)).length;
+          return { task: t, score };
+        }).filter(s => s.score > 0)
+          .sort((a, b) => b.score - a.score);
+
+        const match = scored[0]?.task;
 
         if (!match) {
           await sendReply(from, `Couldn't find a task matching "${keyword}". Try "what are my tasks?" to see the list.`);
