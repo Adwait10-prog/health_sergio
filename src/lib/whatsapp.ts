@@ -15,6 +15,7 @@ export interface ParsedMessage {
     | "add_task"       // "remind me to X" / "add task: Y"
     | "query_tasks"    // "what are my tasks?" / "what's pending?"
     | "complete_task"  // "done with X" / "mark X as done"
+    | "query_memory"   // "what did I discuss with X?" / "what happened last week with Y?"
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -68,6 +69,11 @@ Respond ONLY with valid JSON:
     //
     // For complete_task:
     //   keyword: the key word(s) from the task title to search for (e.g. "Aryan", "lead gen code")
+    //
+    // For query_memory:
+    //   keywords: array of 1-3 search keywords extracted from the question (names, topics, companies)
+    //   dateHint: "recent" | "this_week" | "last_week" | "this_month" | null
+    //   scope: "meetings" | "journal" | "tasks" | "all" — what to search
   },
   "reply": "warm, personal 1-2 line reply. Acknowledge what he shared. Use his name occasionally. Be like a thoughtful friend, not a bot. Use emojis sparingly."
 }
@@ -108,6 +114,15 @@ Examples:
 
 - "done with the Aryan deck" / "mark lead gen code as done" / "completed the finance review"
   → intent: complete_task, keyword: "Aryan" / "lead gen code" / "finance review"
+
+- "what did I discuss with Sam?" / "any follow ups from the DG meeting?"
+  → intent: query_memory, keywords: ["Sam"] / ["DG", "follow up"], dateHint: null, scope: "meetings"
+
+- "how was my energy last week?" / "what did I journal about on Monday?"
+  → intent: query_memory, keywords: ["energy"] / ["Monday"], dateHint: "last_week" / "this_week", scope: "journal"
+
+- "any pending follow ups?" / "what tasks did I complete this week?"
+  → intent: query_memory, keywords: ["follow up"] / ["completed"], dateHint: null, scope: "tasks"
 
 IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.
 IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.`;

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
 import { parseWhatsAppMessage, generateWeekSummary } from "@/lib/whatsapp";
 import { transcribeWhatsAppAudio, parseVoiceTranscript } from "@/lib/voiceNote";
+import { queryMemory } from "@/lib/memoryQuery";
 import twilio from "twilio";
 import { subDays } from "date-fns";
 
@@ -470,6 +471,24 @@ export async function POST(req: NextRequest) {
         });
 
         await sendReply(from, parsed.reply || `✅ Done! "${match.title}" marked as complete.`);
+        break;
+      }
+
+      // ── Query memory (Q&A over journals, meetings, tasks) ─────────
+      case "query_memory": {
+        const d = parsed.data;
+        const keywords = (d.keywords as string[]) ?? [];
+        const dateHint = (d.dateHint as "recent" | "this_week" | "last_week" | "this_month" | null) ?? null;
+        const scope    = (d.scope as "meetings" | "journal" | "tasks" | "all") ?? "all";
+
+        const answer = await queryMemory({
+          keywords,
+          dateHint,
+          scope,
+          originalQuestion: body,
+        });
+
+        await sendReply(from, answer);
         break;
       }
 
