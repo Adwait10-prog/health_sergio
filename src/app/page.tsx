@@ -24,13 +24,19 @@ function greeting() {
   return "Good evening";
 }
 
+// Always convert to IST before extracting date — DB stores midnight IST as 18:30 UTC
 function localKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+  return `${ist.getFullYear()}-${String(ist.getMonth() + 1).padStart(2, "0")}-${String(ist.getDate()).padStart(2, "0")}`;
 }
 
 export default async function TodayPage() {
   const userId = getUserId();
-  const today = startOfDay(new Date());
+  // Use IST-aware today so localKey comparisons line up with DB dates
+  const todayIST = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
+  const todayISTStr = todayIST.toISOString().split("T")[0];
+  const [ty, tm, td] = todayISTStr.split("-").map(Number);
+  const today = new Date(Date.UTC(ty, tm - 1, td)); // midnight UTC for IST-date comparisons
   const yesterday = subDays(today, 1);
   const weekStart = startOfDay(startOfWeek(today, { weekStartsOn: 1 }));
   const last7Start = subDays(today, 7);
