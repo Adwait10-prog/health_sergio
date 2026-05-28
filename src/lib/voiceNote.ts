@@ -63,6 +63,7 @@ export interface ParsedVoiceNote {
   // For task
   taskTitle?: string;
   taskPriority?: string;
+  taskTime?: string | null;
   // Reply to send back
   reply: string;
 }
@@ -92,6 +93,7 @@ Respond ONLY with valid JSON:
   // If task:
   "taskTitle": "clean actionable task title",
   "taskPriority": "high" | "medium" | "low",
+  "taskTime": "time string if mentioned e.g. '3pm', '15:30', null if not mentioned",
 
   "reply": "warm 1-2 line reply confirming what you captured. Be specific — mention the meeting name or key point. No markdown."
 }

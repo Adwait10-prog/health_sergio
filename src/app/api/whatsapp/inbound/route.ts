@@ -125,6 +125,15 @@ export async function POST(req: NextRequest) {
             dueDate: today,
           },
         });
+        // If a time was mentioned, also create a Google Calendar event
+        if (parsed.taskTime) {
+          await createCalendarEvent({
+            title: parsed.taskTitle,
+            date: today,
+            timeStr: parsed.taskTime,
+            reminderMinutes: 60,
+          });
+        }
       } else {
         // General — save as journal entry
         if (parsed.journalText) {
