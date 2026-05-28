@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
-import { shouldSendNudge } from "@/lib/briefData";
+import { shouldSendNudge, isSundayIST } from "@/lib/briefData";
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
@@ -15,6 +15,12 @@ export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new NextResponse("Unauthorized", { status: 401 });
+  }
+
+  // No evening nudge on Sundays — brief already covers the day
+  if (isSundayIST()) {
+    console.log("Evening nudge: skipping Sunday");
+    return NextResponse.json({ ok: true, sent: false, reason: "sunday" });
   }
 
   try {

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import twilio from "twilio";
-import { fetchBriefData, generateMorningBrief } from "@/lib/briefData";
+import {
+  fetchBriefData,
+  generateMorningBrief,
+  fetchWeekReviewData,
+  generateSundayBrief,
+  isSundayIST,
+} from "@/lib/briefData";
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
@@ -18,19 +24,29 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const data = await fetchBriefData();
-    const brief = await generateMorningBrief(data);
+    let message: string;
+
+    if (isSundayIST()) {
+      // Sunday: combined brief + weekly coach review
+      const data = await fetchWeekReviewData();
+      message = await generateSundayBrief(data);
+      console.log("Sunday brief sent:", message.slice(0, 100));
+    } else {
+      // Mon–Sat: regular morning brief
+      const data = await fetchBriefData();
+      message = await generateMorningBrief(data);
+      console.log("Morning brief sent:", message.slice(0, 100));
+    }
 
     await twilioClient.messages.create({
       from: WHATSAPP_FROM,
       to: USER_WHATSAPP,
-      body: brief,
+      body: message,
     });
 
-    console.log("Morning brief sent:", brief.slice(0, 100));
-    return NextResponse.json({ ok: true, preview: brief.slice(0, 100) });
+    return NextResponse.json({ ok: true, sunday: isSundayIST(), preview: message.slice(0, 100) });
   } catch (e) {
-    console.error("Morning brief error:", e);
+    console.error("Brief error:", e);
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
   }
 }

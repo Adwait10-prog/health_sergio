@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
 import { getTodayHMSession, getRaceCountdown, getCurrentWeekHMStats } from "@/lib/hmTracker";
-import { subDays, format } from "date-fns";
+import { subDays, format, getDay } from "date-fns";
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
@@ -182,6 +182,164 @@ Rules:
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5",
     max_tokens: 400,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  return (response.content[0] as { text: string }).text.trim();
+}
+
+// Returns true if today is Sunday (IST)
+export function isSundayIST(): boolean {
+  return getDay(istNow()) === 0;
+}
+
+// Fetch richer data for Sunday weekly coach review
+export async function fetchWeekReviewData() {
+  const userId = getUserId();
+  const today = todayIST();
+  const weekStart = subDays(today, 6); // Mon–Sun
+
+  const [
+    weekLogs,
+    weekReflections,
+    weekStrava,
+    openTasks,
+    weekStats,
+    daysToRace,
+    todaySession,
+  ] = await Promise.all([
+    // Full week daily logs
+    db.dailyLog.findMany({
+      where: { userId, date: { gte: weekStart } },
+      orderBy: { date: "asc" },
+      select: {
+        date: true, rhrBpm: true, hrvMs: true, sleepMin: true,
+        moodScore: true, energyLevel: true, stressLevel: true,
+        didWorkout: true, didJournal: true, didCode: true,
+        didRead: true, didMeditate: true, didNetwork: true, didLearn: true,
+      },
+    }),
+
+    // Full week journal entries — snippet per day
+    db.reflection.findMany({
+      where: { userId, type: "daily", date: { gte: weekStart } },
+      orderBy: { date: "asc" },
+      select: { date: true, journalText: true, lessonsLearned: true, gratitudeItems: true, weeklyScore: true },
+    }),
+
+    // Week's Strava runs
+    db.stravaActivity.findMany({
+      where: { userId, date: { gte: weekStart }, type: { in: ["Run", "TrailRun"] } },
+      orderBy: { date: "asc" },
+      select: { date: true, name: true, distanceM: true, movingTimeSec: true, avgHeartRate: true },
+    }),
+
+    // Open tasks — top 5
+    db.task.findMany({
+      where: { userId, status: { in: ["todo", "in_progress"] } },
+      orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
+      take: 5,
+      select: { title: true, priority: true },
+    }),
+
+    getCurrentWeekHMStats(),
+    getRaceCountdown(),
+    getTodayHMSession(),
+  ]);
+
+  // Aggregate vitals
+  const logsWithHrv = weekLogs.filter(l => l.hrvMs);
+  const avgHrv = logsWithHrv.length
+    ? Math.round(logsWithHrv.reduce((s, l) => s + (l.hrvMs ?? 0), 0) / logsWithHrv.length)
+    : null;
+  const logsWithSleep = weekLogs.filter(l => l.sleepMin);
+  const avgSleep = logsWithSleep.length
+    ? Math.round(logsWithSleep.reduce((s, l) => s + (l.sleepMin ?? 0), 0) / logsWithSleep.length / 60 * 10) / 10
+    : null;
+  const logsWithMood = weekLogs.filter(l => l.moodScore);
+  const avgMood = logsWithMood.length
+    ? Math.round(logsWithMood.reduce((s, l) => s + (l.moodScore ?? 0), 0) / logsWithMood.length * 10) / 10
+    : null;
+
+  // Habit counts
+  const habitCounts = {
+    workout:  weekLogs.filter(l => l.didWorkout).length,
+    journal:  weekLogs.filter(l => l.didJournal).length,
+    code:     weekLogs.filter(l => l.didCode).length,
+    read:     weekLogs.filter(l => l.didRead).length,
+    meditate: weekLogs.filter(l => l.didMeditate).length,
+  };
+
+  // Weekly km
+  const weeklyKm = Math.round(
+    weekStrava.reduce((sum, a) => sum + (a.distanceM ?? 0) / 1000, 0) * 10
+  ) / 10;
+
+  // Journal snippets — one per day, max 150 chars each
+  const journalSnippets = weekReflections
+    .filter(r => r.journalText)
+    .map(r => ({
+      day: format(new Date(r.date), "EEE"),
+      text: (r.journalText as string).slice(0, 150),
+      score: r.weeklyScore,
+    }));
+
+  // Lessons from the week
+  const lessons = weekReflections
+    .filter(r => r.lessonsLearned)
+    .map(r => (r.lessonsLearned as string).slice(0, 100))
+    .join(" | ");
+
+  return {
+    today: format(istNow(), "EEEE, d MMMM"),
+    weekNum: weekStats.weekNum,
+    daysToRace,
+    todaySession: todaySession ? {
+      name: todaySession.name,
+      type: todaySession.type,
+      targetKm: todaySession.targetKm,
+      targetMin: todaySession.targetMin,
+    } : null,
+    vitals: { avgHrv, avgSleep, avgMood },
+    habitCounts,
+    weeklyKm,
+    weeklyKmTarget: weekStats.targetKm,
+    journalSnippets,
+    lessons: lessons || null,
+    openTasks: openTasks.map(t => t.title),
+    runCount: weekStrava.length,
+  };
+}
+
+// Generate Sunday combined brief + weekly coach review
+export async function generateSundayBrief(data: Awaited<ReturnType<typeof fetchWeekReviewData>>): Promise<string> {
+  const prompt = `Write Adwait's Sunday morning WhatsApp message. It has two parts: (1) a brief for today, (2) a weekly coach review. Warm, personal, direct. Max 18 lines total. No markdown. Use emojis sparingly.
+
+Data:
+- Date: ${data.today}
+- Week ${data.weekNum}/25 — ${data.daysToRace} days to Delhi HM
+- Today's session: ${data.todaySession ? `${data.todaySession.name}${data.todaySession.targetKm ? ` · ${data.todaySession.targetKm}km` : ""}${data.todaySession.targetMin ? ` · ~${data.todaySession.targetMin}min` : ""}` : "Rest day"}
+
+Week stats:
+- Running: ${data.weeklyKm}/${data.weeklyKmTarget ?? "—"} km (${data.runCount} runs)
+- Habits: Workout ${data.habitCounts.workout}/7 · Journal ${data.habitCounts.journal}/7 · Code ${data.habitCounts.code}/7 · Read ${data.habitCounts.read}/7 · Meditate ${data.habitCounts.meditate}/7
+- Avg HRV: ${data.vitals.avgHrv ?? "—"} · Avg sleep: ${data.vitals.avgSleep ?? "—"}h · Avg mood: ${data.vitals.avgMood ?? "—"}/10
+- Journal snippets: ${data.journalSnippets.length > 0 ? data.journalSnippets.map(j => `${j.day}: "${j.text}"`).join(" | ") : "nothing logged"}
+- Key lessons: ${data.lessons ?? "none logged"}
+- Open tasks: ${data.openTasks.length > 0 ? data.openTasks.join(", ") : "none"}
+
+Rules:
+1. Start with "Good morning Adwait 🌅 Sunday, [date]"
+2. One line on today's session
+3. Blank line, then "── Week ${data.weekNum} Review ──"
+4. 2-3 lines: what went well this week (be specific, reference journal/stats)
+5. 1-2 lines: what to improve next week (honest, not harsh)
+6. 1 line on running progress vs target
+7. End with one forward-looking challenge for next week`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-4-5",
+    max_tokens: 600,
     messages: [{ role: "user", content: prompt }],
   });
 
