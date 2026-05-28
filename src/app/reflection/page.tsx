@@ -7,15 +7,35 @@ import JournalHistoryCards from "@/components/reflection/JournalHistoryCards";
 
 export const dynamic = "force-dynamic";
 
+// Returns current date string in IST as YYYY-MM-DD
+function todayISTStr(): string {
+  return new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0];
+}
+
+// Returns midnight IST as UTC (how DB stores dates)
+function istToUtc(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d) - 5.5 * 60 * 60 * 1000);
+}
+
 export default async function ReflectionPage() {
   const userId = getUserId();
-  const now        = new Date();
-  const today      = startOfDay(now);
-  const weekStart  = startOfDay(startOfWeek(now, { weekStartsOn: 1 }));
-  const monthStart = startOfDay(startOfMonth(now));
-  const monthKey   = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  const last30Start = subDays(today, 30);
-  const last7Start  = subDays(today, 7);
+  const todayStr   = todayISTStr();
+  const now        = istToUtc(todayStr);
+  const today      = now;
+  const weekStart  = istToUtc(
+    (() => {
+      const d = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+      const day = d.getDay(); // 0=Sun
+      const diff = (day === 0 ? -6 : 1 - day);
+      const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+      return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,"0")}-${String(mon.getDate()).padStart(2,"0")}`;
+    })()
+  );
+  const monthStart = istToUtc(`${todayStr.slice(0,7)}-01`);
+  const monthKey   = todayStr.slice(0, 7);
+  const last30Start = istToUtc((() => { const d = new Date(now.getTime() + 5.5*60*60*1000 - 30*864e5); return d.toISOString().split("T")[0]; })());
+  const last7Start  = istToUtc((() => { const d = new Date(now.getTime() + 5.5*60*60*1000 - 7*864e5); return d.toISOString().split("T")[0]; })());
 
   const [dailyEntry, weeklyEntry, monthlyEntry, monthlyReview, last30Daily, last5Daily, last7DailyLogs] = await Promise.all([
     db.reflection.findFirst({ where: { userId, date: today,      type: "daily"   } }),
@@ -37,20 +57,24 @@ export default async function ReflectionPage() {
     }),
   ]);
 
-  // Stats
+  // Stats — compare in IST
   const journalDaysThisMonth = last30Daily.filter(e => {
-    const d = new Date(e.date);
-    return d >= monthStart;
+    const eIST = new Date(new Date(e.date).getTime() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0];
+    return eIST >= `${monthKey}-01`;
   }).length;
-  const daysInMonthSoFar = today.getDate();
+  const daysInMonthSoFar = parseInt(todayStr.split("-")[2]);
   const journalPct = daysInMonthSoFar > 0 ? Math.round((journalDaysThisMonth / daysInMonthSoFar) * 100) : 0;
 
-  // Journal streak (consecutive days ending today)
+  // Journal streak — compare in IST (add 5.5h offset before formatting)
   let journalStreak = 0;
   for (let i = 0; i < 30; i++) {
-    const d = subDays(today, i);
-    const key = format(d, "yyyy-MM-dd");
-    const found = last30Daily.find(e => format(new Date(e.date), "yyyy-MM-dd") === key);
+    const d = new Date(now.getTime() - i * 864e5);
+    // Convert DB date (UTC) to IST string for comparison
+    const key = new Date(d.getTime() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const found = last30Daily.find(e => {
+      const eIST = new Date(new Date(e.date).getTime() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0];
+      return eIST === key;
+    });
     if (found) journalStreak++;
     else break;
   }
