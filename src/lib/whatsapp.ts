@@ -14,6 +14,7 @@ export interface ParsedMessage {
     | "query_week"     // "how was my week?"
     | "add_task"       // "remind me to X" / "add task: Y"
     | "query_tasks"    // "what are my tasks?" / "what's pending?"
+    | "complete_task"  // "done with X" / "mark X as done"
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -64,6 +65,9 @@ Respond ONLY with valid JSON:
     //
     // For query_tasks:
     //   filter: "today" | "all" | "high" — infer from message ("today's tasks", "urgent", "everything")
+    //
+    // For complete_task:
+    //   keyword: the key word(s) from the task title to search for (e.g. "Aryan", "lead gen code")
   },
   "reply": "warm, personal 1-2 line reply. Acknowledge what he shared. Use his name occasionally. Be like a thoughtful friend, not a bot. Use emojis sparingly."
 }
@@ -101,6 +105,9 @@ Examples:
 
 - "show all my tasks" / "what's everything I have to do?"
   → intent: query_tasks, filter: "all"
+
+- "done with the Aryan deck" / "mark lead gen code as done" / "completed the finance review"
+  → intent: complete_task, keyword: "Aryan" / "lead gen code" / "finance review"
 
 IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.
 IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.`;

@@ -10,6 +10,7 @@ const NAV = [
   { href: "/founder",    label: "Founder",    icon: "✦", accent: "var(--c-founder)" },
   { href: "/finance",    label: "Finance",    icon: "$",  accent: "var(--c-finance)" },
   { href: "/reflection", label: "Reflect",    icon: "☐", accent: "var(--c-reflection)" },
+  { href: "/meetings",   label: "Meetings",   icon: "🤝", accent: "var(--c-founder)" },
 ];
 
 export default function BottomNav() {

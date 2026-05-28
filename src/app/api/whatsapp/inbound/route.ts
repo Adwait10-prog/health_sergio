@@ -440,6 +440,39 @@ export async function POST(req: NextRequest) {
         break;
       }
 
+      // ── Complete task ──────────────────────────────────────────────
+      case "complete_task": {
+        const keyword = (parsed.data.keyword as string ?? "").toLowerCase().trim();
+
+        if (!keyword) {
+          await sendReply(from, "Which task did you complete? Be a bit more specific 🙂");
+          break;
+        }
+
+        // Find matching open task by keyword search
+        const tasks = await db.task.findMany({
+          where: { userId, status: { in: ["todo", "in_progress"] } },
+          select: { id: true, title: true },
+        });
+
+        const match = tasks.find(t =>
+          t.title.toLowerCase().includes(keyword)
+        );
+
+        if (!match) {
+          await sendReply(from, `Couldn't find a task matching "${keyword}". Try "what are my tasks?" to see the list.`);
+          break;
+        }
+
+        await db.task.update({
+          where: { id: match.id },
+          data: { status: "done", doneAt: new Date() },
+        });
+
+        await sendReply(from, parsed.reply || `✅ Done! "${match.title}" marked as complete.`);
+        break;
+      }
+
       // ── Unknown ────────────────────────────────────────────────────
       default: {
         await sendReply(from,

@@ -10,6 +10,7 @@ const NAV = [
   { href: "/founder",    label: "Founder",    icon: "✦", accent: "var(--c-founder)",     bg: "var(--c-founder-bg)" },
   { href: "/finance",    label: "Finance",    icon: "$", accent: "var(--c-finance)",     bg: "var(--c-finance-bg)" },
   { href: "/reflection", label: "Reflection", icon: "☐", accent: "var(--c-reflection)", bg: "var(--c-reflection-bg)" },
+  { href: "/meetings",   label: "Meetings",   icon: "🤝", accent: "var(--c-founder)",    bg: "var(--c-founder-bg)" },
 ];
 
 export default function Sidebar() {
