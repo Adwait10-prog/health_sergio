@@ -261,7 +261,7 @@ export default async function TodayPage() {
               totalElevationM: a.totalElevationM,
             }))}
             weekBuckets={weekBuckets}
-            currentWeekKm={weekHMStats.doneKm}
+            currentWeekKm={weekBuckets[3]?.km ?? 0}
             currentWeekTargetKm={weekHMStats.targetKm}
             weekNum={weekHMStats.weekNum}
             raceCountdown={raceCountdown}
