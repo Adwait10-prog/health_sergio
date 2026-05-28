@@ -5,6 +5,13 @@ import { parseWhatsAppMessage, generateWeekSummary } from "@/lib/whatsapp";
 import twilio from "twilio";
 import { subDays } from "date-fns";
 
+// Empty TwiML response — tells Twilio "got it, no reply from webhook"
+// We send replies via the REST API (sendReply), not via TwiML body
+const TWIML_OK = new NextResponse("<Response></Response>", {
+  status: 200,
+  headers: { "Content-Type": "text/xml" },
+});
+
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
   process.env.TWILIO_AUTH_TOKEN!
@@ -33,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   console.log("WhatsApp inbound:", { from, body: body.slice(0, 100), mediaUrl });
 
-  if (!body && !mediaUrl) return new NextResponse("OK", { status: 200 });
+  if (!body && !mediaUrl) return TWIML_OK;
 
   const userId = getUserId();
   const today  = todayIST();
@@ -44,7 +51,7 @@ export async function POST(req: NextRequest) {
       await sendReply(from,
         "🎤 Voice notes coming soon! For now just type — write freely like you're talking to a friend."
       );
-      return new NextResponse("OK", { status: 200 });
+      return TWIML_OK;
     }
 
     const parsed = await parseWhatsAppMessage(body);
@@ -346,11 +353,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return new NextResponse("OK", { status: 200 });
+    return TWIML_OK;
 
   } catch (e) {
     console.error("WhatsApp handler error:", e);
     await sendReply(from, "⚠️ Something went wrong. Try again in a moment.").catch(() => {});
-    return new NextResponse("OK", { status: 200 });
+    return TWIML_OK;
   }
 }
