@@ -5,7 +5,7 @@ import { calcWeeklyCTOScore } from "@/lib/scores";
 import ScoreRing from "@/components/today/ScoreRing";
 import TechLogForm from "@/components/technical/TechLogForm";
 import Sparkline from "@/components/ui/Sparkline";
-import TaskList from "@/components/tasks/TaskList";
+import PageSidebar from "@/components/layout/PageSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export default async function TechnicalPage() {
   const today = startOfDay(new Date());
   const weekStart = startOfWeek(today, { weekStartsOn: 1 });
 
-  const [todayLog, weekLogs, last30Logs, tasks] = await Promise.all([
+  const [todayLog, weekLogs, last30Logs] = await Promise.all([
     db.technicalLog.findFirst({ where: { userId, date: today } }),
     db.technicalLog.findMany({
       where: { userId, date: { gte: weekStart } },
@@ -23,21 +23,15 @@ export default async function TechnicalPage() {
       where: { userId, date: { gte: subDays(today, 30) } },
       orderBy: { date: "asc" },
     }),
-    db.task.findMany({
-      where: { userId, section: "technical", status: { not: "cancelled" } },
-      orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-    }),
   ]);
 
   const ctoScore = calcWeeklyCTOScore(weekLogs);
 
-  // Weekly totals for counter cards
   const weekHours  = Math.round(weekLogs.reduce((s, l) => s + (l.hoursCodedMin ?? 0), 0) / 60 * 10) / 10;
   const weekFeats  = weekLogs.reduce((s, l) => s + (l.featuresShipped ?? 0), 0);
   const weekAI     = weekLogs.reduce((s, l) => s + (l.aiAgentsBuilt ?? 0) + (l.promptsEngineered ?? 0), 0);
   const weekPRs    = weekLogs.reduce((s, l) => s + (l.prsMerged ?? 0), 0);
 
-  // 30-day sparkline data
   const hoursSparkline    = last30Logs.map((l) => (l.hoursCodedMin ?? 0) / 60);
   const featuresSparkline = last30Logs.map((l) => l.featuresShipped ?? 0);
 
@@ -49,36 +43,33 @@ export default async function TechnicalPage() {
   ];
 
   return (
-    <div className="p-4 lg:p-6 max-w-5xl">
+    <div style={{ padding: "24px 20px" }}>
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--technical)" }}>Technical</h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>This week's output</p>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--technical)", margin: 0 }}>Technical</h1>
+        <p style={{ fontSize: 13, marginTop: 2, color: "var(--text-muted)", margin: "2px 0 0" }}>This week's output</p>
       </div>
 
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_300px] gap-4">
-        {/* Left column */}
-        <div className="flex flex-col gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 16, alignItems: "start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
           {/* CTO score + counters */}
           <div
-            className="rounded-xl p-4"
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
+            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
           >
-            <div className="flex items-start gap-6">
-              <div className="flex flex-col items-center gap-1">
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
                 <ScoreRing label="CTO Score" score={ctoScore} size={96} />
-                <p className="text-[10px] text-center" style={{ color: "var(--text-muted)" }}>this week</p>
+                <p style={{ fontSize: 10, textAlign: "center", color: "var(--text-muted)", margin: 0 }}>this week</p>
               </div>
-              <div className="flex-1 grid grid-cols-2 gap-3">
+              <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {counters.map(({ label, value, unit, color }) => (
                   <div
                     key={label}
-                    className="rounded-lg p-3"
-                    style={{ background: "var(--bg-soft)" }}
+                    style={{ background: "var(--bg-soft)", borderRadius: 8, padding: 12 }}
                   >
-                    <p className="text-xs mb-0.5" style={{ color: "var(--text-muted)" }}>{label}</p>
-                    <p className="text-xl font-bold" style={{ color }}>
+                    <p style={{ fontSize: 12, marginBottom: 2, color: "var(--text-muted)", margin: "0 0 2px" }}>{label}</p>
+                    <p style={{ fontSize: 20, fontWeight: 700, color, margin: 0 }}>
                       {value}{unit}
                     </p>
                   </div>
@@ -92,22 +83,21 @@ export default async function TechnicalPage() {
 
           {/* 30-day sparklines */}
           <div
-            className="rounded-xl p-4"
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
+            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
           >
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>30-day trends</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: "var(--text)", margin: "0 0 16px" }}>30-day trends</h2>
             {last30Logs.length === 0 ? (
-              <p className="text-xs" style={{ color: "var(--text-muted)" }}>No data yet — start logging daily.</p>
+              <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>No data yet — start logging daily.</p>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {[
                   { label: "Hours coded / day", data: hoursSparkline,    color: "var(--technical)" },
                   { label: "Features shipped",  data: featuresSparkline, color: "var(--accent)"    },
                 ].map(({ label, data, color }) => (
-                  <div key={label} className="flex items-center gap-4">
-                    <span className="text-xs w-36 shrink-0" style={{ color: "var(--text-dim)" }}>{label}</span>
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <span style={{ fontSize: 12, width: 144, flexShrink: 0, color: "var(--text-dim)" }}>{label}</span>
                     <Sparkline values={data} color={color} width={200} height={36} />
-                    <span className="text-sm font-semibold ml-auto" style={{ color }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, marginLeft: "auto", color }}>
                       {data[data.length - 1]?.toFixed(1) ?? "—"}
                     </span>
                   </div>
@@ -117,18 +107,8 @@ export default async function TechnicalPage() {
           </div>
         </div>
 
-        {/* Right column — tasks */}
-        <div
-          className="rounded-xl p-4 h-fit lg:sticky lg:top-6"
-          style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-        >
-          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>Technical Tasks</h2>
-          <TaskList
-            initialTasks={tasks as any}
-            section="technical"
-            defaultSection="technical"
-          />
-        </div>
+        {/* Right column — sidebar */}
+        <PageSidebar section="technical" accentColor="var(--c-technical)" />
       </div>
     </div>
   );

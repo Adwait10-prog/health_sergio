@@ -7,6 +7,14 @@ interface Props {
   connected: boolean;
 }
 
+function StravaIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
+    </svg>
+  );
+}
+
 export default function StravaConnect({ connected }: Props) {
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
@@ -21,7 +29,7 @@ export default function StravaConnect({ connected }: Props) {
       if (data.error) {
         setSyncMsg(`Error: ${data.error}`);
       } else {
-        setSyncMsg(`Synced ${data.synced} activities`);
+        setSyncMsg(`✓ ${data.synced} activities synced`);
         router.refresh();
       }
     } finally {
@@ -34,37 +42,51 @@ export default function StravaConnect({ connected }: Props) {
     return (
       <a
         href="/api/strava/connect"
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold"
-        style={{ background: "#FC4C02", color: "#fff", textDecoration: "none" }}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "6px 14px", borderRadius: 8,
+          background: "#FC4C02", color: "#fff",
+          fontSize: 13, fontWeight: 600, textDecoration: "none",
+          boxShadow: "0 1px 4px rgba(252,76,2,0.3)",
+        }}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
-        </svg>
+        <StravaIcon />
         Connect Strava
       </a>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       {syncMsg && (
-        <span className="text-xs" style={{ color: "var(--text-muted)" }}>{syncMsg}</span>
+        <span style={{ fontSize: 12, color: syncMsg.startsWith("Error") ? "var(--c-warn)" : "var(--c-fitness)", fontWeight: 500 }}>
+          {syncMsg}
+        </span>
       )}
       <button
         onClick={sync}
         disabled={syncing}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold"
         style={{
-          background: syncing ? "var(--bg-soft)" : "#FC4C02",
-          color: syncing ? "var(--text-muted)" : "#fff",
-          border: syncing ? "1px solid var(--border)" : "none",
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "6px 14px", borderRadius: 8, cursor: syncing ? "not-allowed" : "pointer",
+          background: syncing ? "var(--bg-subtle)" : "#FC4C02",
+          color: syncing ? "var(--text-3)" : "#fff",
+          border: syncing ? "1px solid var(--border)" : "1px solid transparent",
+          fontSize: 13, fontWeight: 600,
+          boxShadow: syncing ? "none" : "0 1px 4px rgba(252,76,2,0.3)",
+          transition: "all 0.15s",
+          opacity: syncing ? 0.7 : 1,
         }}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
-        </svg>
+        <span style={{
+          display: "inline-block",
+          animation: syncing ? "spin 1s linear infinite" : "none",
+        }}>
+          <StravaIcon />
+        </span>
         {syncing ? "Syncing…" : "Sync Strava"}
       </button>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

@@ -59,6 +59,8 @@ model DailyLog {
 
   disciplineScore Float?
   momentumScore   Float?
+  vo2MaxMlKgMin   Float?
+  hrvMs           Int?
 
   notes    String?
   loggedAt DateTime @default(now())

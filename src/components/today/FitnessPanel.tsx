@@ -47,6 +47,7 @@ interface Props {
   currentWeekTargetKm: number;
   weekNum: number;
   raceCountdown: number;
+  inlineMode?: boolean; // when true, hides the training card (shown separately)
 }
 
 const TYPE_COLOR: Record<string, string> = {
@@ -117,6 +118,7 @@ export default function FitnessPanel({
   currentWeekTargetKm,
   weekNum,
   raceCountdown,
+  inlineMode = false,
 }: Props) {
   const maxKm = Math.max(...weekBuckets.map((b) => b.targetKm), 1);
   const weekPct = currentWeekTargetKm > 0
@@ -132,26 +134,27 @@ export default function FitnessPanel({
   return (
     <div className="flex flex-col gap-3">
 
-      {/* Today's session hero */}
-      {todaySession && (
-        <div
-          className="rounded-xl p-4"
-          style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--fitness)" }}>
+      {/* Today's session hero — hidden in inlineMode (shown in sidebar instead) */}
+      {!inlineMode && todaySession && (
+        <div style={{
+          background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
+          padding: 20, boxShadow: "var(--shadow)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--c-fitness)", margin: 0 }}>
               Today's training · Wk {weekNum}
             </p>
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            <span style={{ fontSize: 11, color: "var(--text-4)" }}>
               🏁 {raceCountdown}d to race
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span
-                className="text-lg w-10 h-10 flex items-center justify-center rounded-lg font-bold"
-                style={{ background: sessionTypeBg(todaySession.type), color: sessionTypeColor(todaySession.type) }}
-              >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{
+                fontSize: 18, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center",
+                borderRadius: 11, fontWeight: 700,
+                background: sessionTypeBg(todaySession.type), color: sessionTypeColor(todaySession.type),
+              }}>
                 {todaySession.type.startsWith("gym") ? "🏋️" :
                   todaySession.type === "easy" ? "🏃" :
                   todaySession.type === "quality" ? "⚡" :
@@ -160,8 +163,8 @@ export default function FitnessPanel({
                   todaySession.type === "race" ? "🏅" : "💤"}
               </span>
               <div>
-                <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{todaySession.name}</p>
-                <p className="text-xs mt-0.5 flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>{todaySession.name}</p>
+                <p style={{ fontSize: 12, color: "var(--text-3)", margin: "3px 0 0", display: "flex", alignItems: "center", gap: 8 }}>
                   {todaySession.targetKm && <span>{todaySession.targetKm} km</span>}
                   {todaySession.targetMin && <span>~{todaySession.targetMin} min</span>}
                   {!todaySession.targetKm && !todaySession.targetMin && <span>Strength session</span>}
@@ -169,25 +172,23 @@ export default function FitnessPanel({
               </div>
             </div>
             {todaySession.logStatus ? (
-              <span
-                className="text-xs font-semibold px-3 py-1.5 rounded-full"
-                style={{
-                  background: todaySession.logStatus === "done" ? "var(--accent-soft)" :
-                               todaySession.logStatus === "partial" ? "#FEF3C7" : "var(--bg-soft)",
-                  color: todaySession.logStatus === "done" ? "var(--accent-strong)" :
-                         todaySession.logStatus === "partial" ? "#B45309" : "var(--text-muted)",
-                }}
-              >
+              <span style={{
+                fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 20,
+                background: todaySession.logStatus === "done" ? "var(--c-fitness-bg)" :
+                             todaySession.logStatus === "partial" ? "#FBF3E2" : "var(--bg-subtle)",
+                color: todaySession.logStatus === "done" ? "var(--c-fitness)" :
+                       todaySession.logStatus === "partial" ? "var(--c-today)" : "var(--text-4)",
+              }}>
                 {todaySession.logStatus === "done" ? "✓ Done" :
                  todaySession.logStatus === "partial" ? "~ Partial" : "Skipped"}
               </span>
             ) : (
               <a
-                href="http://localhost:3000/log"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs font-semibold px-3 py-1.5 rounded-full"
-                style={{ background: "var(--fitness)", color: "#fff", textDecoration: "none" }}
+                href="/log"
+                style={{
+                  fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 20,
+                  background: "var(--c-fitness)", color: "#fff", textDecoration: "none",
+                }}
               >
                 Log it →
               </a>
@@ -197,64 +198,38 @@ export default function FitnessPanel({
       )}
 
       {/* Weekly progress + 4-week trend */}
-      <div
-        className="rounded-xl p-4"
-        style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>This week's mileage</h3>
-          <span className="text-xs font-semibold" style={{ color: weekPct >= 100 ? "var(--accent-strong)" : "var(--fitness)" }}>
+      <div style={{
+        background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
+        padding: 24, boxShadow: "var(--shadow)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>This week's mileage</h3>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--c-fitness)" }}>
             {currentWeekKm.toFixed(1)} / {currentWeekTargetKm} km
           </span>
         </div>
 
-        {/* Big progress bar */}
-        <div className="mb-4">
-          <div className="w-full rounded-full overflow-hidden" style={{ background: "var(--bg-soft)", height: 10 }}>
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{
-                width: `${weekPct}%`,
-                background: weekPct >= 100
-                  ? "var(--accent)"
-                  : `linear-gradient(90deg, var(--fitness), var(--accent))`,
-              }}
-            />
-          </div>
-          <p className="text-xs mt-1 text-right" style={{ color: "var(--text-muted)" }}>{weekPct}% of target</p>
+        {/* Progress bar */}
+        <div style={{ height: 6, background: "var(--bg-subtle)", borderRadius: 3, marginBottom: 4 }}>
+          <div style={{ width: `${weekPct}%`, height: "100%", background: "var(--c-fitness)", borderRadius: 3, transition: "width 0.7s ease" }} />
         </div>
+        <p style={{ fontSize: 11, color: "var(--text-4)", textAlign: "right", marginBottom: 16 }}>{weekPct}% of target</p>
 
         {/* 4-week bar chart */}
-        <p className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>Last 4 weeks</p>
-        <div className="flex items-end gap-2" style={{ height: 56 }}>
+        <p style={{ fontSize: 11, fontWeight: 500, color: "var(--text-4)", marginBottom: 8 }}>Last 4 weeks</p>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 72 }}>
           {weekBuckets.map((b, i) => {
             const barPct = maxKm > 0 ? (b.km / maxKm) * 100 : 0;
-            const targetPct = maxKm > 0 ? (b.targetKm / maxKm) * 100 : 0;
             const isLast = i === weekBuckets.length - 1;
             return (
-              <div key={b.label} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs" style={{ color: "var(--text-muted)", fontSize: 9 }}>{b.km.toFixed(0)}</span>
-                <div className="relative w-full flex items-end" style={{ height: 40 }}>
-                  {/* target ghost bar */}
-                  <div
-                    className="absolute bottom-0 w-full rounded-t"
-                    style={{ height: `${targetPct}%`, background: "var(--bg-soft)", opacity: 0.8 }}
-                  />
-                  {/* actual bar */}
-                  <div
-                    className="absolute bottom-0 w-full rounded-t transition-all duration-500"
-                    style={{
-                      height: `${barPct}%`,
-                      background: isLast
-                        ? `linear-gradient(180deg, var(--fitness), var(--accent))`
-                        : b.km >= b.targetKm ? "var(--accent)" : "var(--fitness)",
-                      opacity: isLast ? 1 : 0.7,
-                    }}
-                  />
-                </div>
-                <span className="text-xs font-medium" style={{ color: isLast ? "var(--text)" : "var(--text-muted)", fontSize: 10 }}>
-                  {b.label}
-                </span>
+              <div key={b.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)" }}>{b.km > 0 ? b.km : ""}</span>
+                <div style={{
+                  width: "100%", height: `${Math.max((b.km / maxKm) * 44, b.km > 0 ? 3 : 0)}px`,
+                  background: isLast ? "var(--c-fitness)" : "var(--border-light)",
+                  borderRadius: 4, transition: "height 0.6s ease-out",
+                }} />
+                <span style={{ fontSize: 10, color: "var(--text-4)" }}>{b.label}</span>
               </div>
             );
           })}
@@ -262,44 +237,44 @@ export default function FitnessPanel({
       </div>
 
       {/* Recent activities */}
-      <div
-        className="rounded-xl p-4"
-        style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Recent activities</h3>
+      <div style={{
+        background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
+        padding: 24, boxShadow: "var(--shadow)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>Recent activities</h3>
           {totalRunKm > 0 && (
-            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            <span style={{ fontSize: 12, color: "var(--text-4)" }}>
               {totalRunKm.toFixed(1)} km run
               {avgHR ? ` · ${avgHR} bpm avg` : ""}
             </span>
           )}
         </div>
-        <div className="flex flex-col gap-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {recentActivities.slice(0, 6).map((a) => {
             const pace = a.avgSpeedMps && a.avgSpeedMps > 0 ? formatPace(a.avgSpeedMps) : null;
             const dist = a.distanceM && a.distanceM > 100 ? formatDistance(a.distanceM) : null;
             const dur = a.movingTimeSec ? formatDuration(a.movingTimeSec) : null;
             const dateLabel = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short" }).format(new Date(a.date));
             return (
-              <div key={a.id} className="flex items-center gap-3 py-1.5">
-                <span
-                  className="text-sm w-8 h-8 flex items-center justify-center rounded-lg shrink-0"
-                  style={{ background: typeBg(a.type), color: typeColor(a.type) }}
-                >
+              <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border-light)" }}>
+                <span style={{
+                  fontSize: 15, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: 10, flexShrink: 0, background: typeBg(a.type),
+                }}>
                   {typeIcon(a.type)}
                 </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--text)" }}>{a.name}</p>
-                  <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</p>
+                  <p style={{ fontSize: 11, color: "var(--text-4)", margin: "2px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
                     <span>{dateLabel}</span>
-                    {dist && <><span>·</span><span>{dist}</span></>}
-                    {dur && <><span>·</span><span>{dur}</span></>}
-                    {pace && (a.type === "Run" || a.type === "TrailRun") && <><span>·</span><span>{pace}</span></>}
+                    {dist && <><span style={{ opacity: 0.4 }}>·</span><span>{dist}</span></>}
+                    {dur && <><span style={{ opacity: 0.4 }}>·</span><span>{dur}</span></>}
+                    {pace && (a.type === "Run" || a.type === "TrailRun") && <><span style={{ opacity: 0.4 }}>·</span><span>{pace}</span></>}
                   </p>
                 </div>
                 {a.avgHeartRate && (
-                  <span className="text-xs font-medium shrink-0" style={{ color: "var(--text-muted)" }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, flexShrink: 0, color: "var(--text-3)" }}>
                     ❤️ {a.avgHeartRate}
                   </span>
                 )}
@@ -307,7 +282,7 @@ export default function FitnessPanel({
             );
           })}
           {recentActivities.length === 0 && (
-            <p className="text-sm text-center py-4" style={{ color: "var(--text-muted)" }}>
+            <p style={{ fontSize: 13, textAlign: "center", padding: "16px 0", color: "var(--text-4)" }}>
               No activities synced yet
             </p>
           )}

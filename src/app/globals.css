@@ -1,77 +1,123 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #F5F7FA;
-  --bg-card: #FFFFFF;
-  --bg-soft: #F0F3F8;
-  --border: #E5E9F0;
-  --text: #0F172A;
-  --text-dim: #475569;
-  --text-muted: #94A3B8;
-  --accent: #16A34A;
-  --accent-strong: #15803D;
-  --accent-soft: #DCFCE7;
-  --warn: #F97316;
-  --gold: #F59E0B;
-  --technical: #6366F1;
-  --founder: #8B5CF6;
-  --finance: #0EA5E9;
-  --reflection: #EC4899;
-  --fitness: #10B981;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+  /* ── Warm organic palette (v2) ── */
+  --bg: #FAF8F5;
+  --bg-subtle: #F3EFE9;
+  --surface: #FFFFFF;
+  --border: #E8E2D9;
+  --border-light: #F0EBE3;
+
+  --text-1: #1A150F;
+  --text-2: #5C5248;
+  --text-3: #8C8074;
+  --text-4: #B8AEA2;
+
+  /* Section accents */
+  --c-today:          #C08B2F;
+  --c-today-bg:       #FBF3E2;
+  --c-fitness:        #248B52;
+  --c-fitness-bg:     #E2F5EA;
+  --c-technical:      #5563C0;
+  --c-technical-bg:   #ECEDF8;
+  --c-founder:        #C06030;
+  --c-founder-bg:     #FBEDE4;
+  --c-finance:        #1E8585;
+  --c-finance-bg:     #E0F3F3;
+  --c-reflection:     #B0567A;
+  --c-reflection-bg:  #F6EAF0;
+
+  /* Legacy aliases used by existing components */
+  --bg-card:      var(--surface);
+  --bg-soft:      var(--bg-subtle);
+  --text:         var(--text-1);
+  --text-dim:     var(--text-2);
+  --text-muted:   var(--text-3);
+  --accent:       var(--c-fitness);
+  --accent-strong: #1A6B3E;
+  --accent-soft:  var(--c-fitness-bg);
+  --warn:         #F97316;
+  --gold:         #F59E0B;
+  --technical:    var(--c-technical);
+  --founder:      var(--c-founder);
+  --finance:      var(--c-finance);
+  --reflection:   var(--c-reflection);
+  --fitness:      var(--c-fitness);
+  --shadow-sm:    0 1px 2px rgba(26, 21, 15, 0.04);
+  --shadow-md:    0 4px 12px rgba(26, 21, 15, 0.06);
+
+  --radius:    14px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --shadow:    0 1px 2px rgba(26, 21, 15, 0.04);
+  --sidebar-w: 224px;
+}
+
+/* ── Dark mode ── */
+.dark-mode {
+  --bg: #0F0D0A; --bg-subtle: #1A1714; --surface: #1E1B16;
+  --border: #302B23; --border-light: #262118;
+  --text-1: #EDE8DF; --text-2: #A09282; --text-3: #706458; --text-4: #4A4038;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3); --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+  --c-today-bg: #2A2010; --c-fitness-bg: #0E2618; --c-technical-bg: #161830;
+  --c-founder-bg: #2A1810; --c-finance-bg: #0E2626; --c-reflection-bg: #2A1520;
+  --bg-card: var(--surface); --bg-soft: var(--bg-subtle);
+  --text: var(--text-1); --text-dim: var(--text-2); --text-muted: var(--text-3);
+  --accent-soft: var(--c-fitness-bg);
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-bg-card: var(--bg-card);
-  --color-bg-soft: var(--bg-soft);
+  --color-bg-card: var(--surface);
+  --color-bg-soft: var(--bg-subtle);
   --color-border: var(--border);
-  --color-app-text: var(--text);
-  --color-text-dim: var(--text-dim);
-  --color-text-muted: var(--text-muted);
-  --color-accent: var(--accent);
+  --color-app-text: var(--text-1);
+  --color-text-dim: var(--text-2);
+  --color-text-muted: var(--text-3);
+  --color-accent: var(--c-fitness);
   --color-accent-strong: var(--accent-strong);
-  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft: var(--c-fitness-bg);
   --color-warn: var(--warn);
   --color-gold: var(--gold);
-  --color-technical: var(--technical);
-  --color-founder: var(--founder);
-  --color-finance: var(--finance);
-  --color-reflection: var(--reflection);
-  --color-fitness: var(--fitness);
-  --font-sans: var(--font-geist-sans);
+  --color-technical: var(--c-technical);
+  --color-founder: var(--c-founder);
+  --color-finance: var(--c-finance);
+  --color-reflection: var(--c-reflection);
+  --color-fitness: var(--c-fitness);
+  --font-sans: 'DM Sans', system-ui, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html, body {
-  height: 100%;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
 
 body {
   background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  color: var(--text-1);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Homepage 3-column grid — responsive */
-.home-grid {
-  display: flex;
-  flex-direction: column;
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Range inputs ── */
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; height: 6px;
+  border-radius: 3px; background: var(--bg-subtle); outline: none; width: 100%;
 }
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--text-1); border: 3px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12); cursor: pointer;
+}
+
+/* ── Homepage 3-col grid (legacy, now replaced by two-col) ── */
+.home-grid { display: flex; flex-direction: column; }
 @media (min-width: 900px) {
-  .home-grid {
-    display: grid;
-    grid-template-columns: 1fr 260px;
-  }
-  /* tasks col spans 1, fitness col merges into right with habits */
+  .home-grid { display: grid; grid-template-columns: 1fr 260px; }
 }
 @media (min-width: 1200px) {
-  .home-grid {
-    display: grid;
-    grid-template-columns: 1fr 280px 280px;
-  }
+  .home-grid { display: grid; grid-template-columns: 1fr 280px 280px; }
 }

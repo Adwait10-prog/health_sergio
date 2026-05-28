@@ -1,74 +1,54 @@
 "use client";
 
-import { scoreColor } from "@/lib/scores";
-import { useState } from "react";
-
 interface Props {
   label: string;
   score: number;
   size?: number;
+  color?: string;
   sublabel?: string;
 }
 
-export default function ScoreRing({ label, score, size = 88, sublabel }: Props) {
-  const [hovered, setHovered] = useState(false);
-  const r = (size - 12) / 2;
+export default function ScoreRing({ label, score, size = 88, color, sublabel }: Props) {
+  const strokeWidth = 7;
+  const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
-  const dash = (score / 100) * circ;
-  const color = scoreColor(score);
+  const pct = score > 0 ? Math.min(score / 100, 1) : 0;
+  const offset = circ * (1 - pct);
+
+  const resolvedColor = color || (
+    score >= 80 ? "var(--c-fitness)" :
+    score >= 60 ? "var(--c-today)" :
+    score >= 40 ? "var(--c-founder)" :
+    "var(--text-4)"
+  );
 
   const tier =
     score >= 85 ? "🏆" :
     score >= 70 ? "✨" :
     score >= 50 ? "📈" :
-    score > 0   ? "💪" : "—";
+    score > 0   ? "💪" : "";
+
+  const display = score > 0 ? score : "—";
 
   return (
-    <div
-      className="flex flex-col items-center gap-1.5 cursor-default select-none"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ transition: "transform 0.15s ease", transform: hovered ? "translateY(-2px)" : "none" }}
-    >
-      <div className="relative" style={{ width: size, height: size }}>
-        {/* Glow on hover */}
-        {hovered && score > 0 && (
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{
-              background: `radial-gradient(circle, ${color}20 0%, transparent 70%)`,
-              transform: "scale(1.1)",
-            }}
-          />
-        )}
-        <svg width={size} height={size} className="-rotate-90">
-          <circle
-            cx={size / 2} cy={size / 2} r={r}
-            fill="none" stroke="var(--bg-soft)" strokeWidth={8}
-          />
-          <circle
-            cx={size / 2} cy={size / 2} r={r}
-            fill="none" stroke={color} strokeWidth={8}
-            strokeDasharray={`${dash} ${circ}`}
-            strokeLinecap="round"
-            style={{ transition: "stroke-dasharray 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-bold leading-none" style={{ fontSize: size * 0.22, color: "var(--text)" }}>
-            {score > 0 ? score : "—"}
-          </span>
-          {score > 0 && (
-            <span style={{ fontSize: size * 0.16, marginTop: 2 }}>{tier}</span>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+      <div style={{ position: "relative", width: size, height: size }}>
+        <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--bg-subtle)" strokeWidth={strokeWidth} />
+          {pct > 0 && (
+            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={resolvedColor} strokeWidth={strokeWidth}
+              strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+              style={{ transition: "stroke-dashoffset 0.8s cubic-bezier(0.34,1.56,0.64,1)" }}
+            />
           )}
+        </svg>
+        <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: size * 0.26, fontWeight: 700, color: "var(--text-1)", lineHeight: 1 }}>{display}</span>
+          {tier && <span style={{ fontSize: size * 0.16, marginTop: 2 }}>{tier}</span>}
         </div>
       </div>
-      <span className="text-xs font-medium text-center leading-tight" style={{ color: "var(--text-dim)" }}>
-        {label}
-      </span>
-      {sublabel && (
-        <span className="text-xs" style={{ color: "var(--text-muted)", fontSize: 10 }}>{sublabel}</span>
-      )}
+      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-3)", textAlign: "center" }}>{label}</span>
+      {sublabel && <span style={{ fontSize: 10, color: "var(--text-4)" }}>{sublabel}</span>}
     </div>
   );
 }

@@ -39,32 +39,40 @@ export default function DeepWorkTimer() {
   }
 
   return (
-    <div
-      className="rounded-xl p-4 flex items-center gap-4"
-      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-    >
-      <div className="flex-1">
-        <p className="text-xs font-medium mb-1" style={{ color: "var(--text-muted)" }}>Deep Work Timer</p>
-        <p className="text-2xl font-mono font-bold tracking-tight" style={{ color: "var(--text)" }}>
+    <div style={{
+      background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
+      padding: 24, boxShadow: "var(--shadow)", display: "flex", alignItems: "center", justifyContent: "space-between",
+    }}>
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-4)", marginBottom: 4 }}>Deep Work Timer</p>
+        <p style={{ fontSize: 32, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--text-1)", letterSpacing: "-0.02em", lineHeight: 1 }}>
           {fmt(elapsed)}
         </p>
-        {saved && <p className="text-xs mt-1" style={{ color: "var(--accent)" }}>Saved ✓</p>}
+        {saved && <p style={{ fontSize: 12, color: "var(--c-fitness)", marginTop: 4 }}>Saved ✓</p>}
       </div>
       {!running ? (
         <button
           onClick={() => { setRunning(true); setSaved(false); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-          style={{ background: "var(--accent)", color: "#fff" }}
+          style={{
+            padding: "10px 24px", fontSize: 14, fontWeight: 600, border: "none",
+            borderRadius: "var(--radius-sm)", cursor: "pointer",
+            color: "#fff", background: "var(--c-fitness)",
+            display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+          }}
         >
-          <Play size={14} /> Start
+          ▶ Start
         </button>
       ) : (
         <button
           onClick={stop}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-          style={{ background: "var(--warn)", color: "#fff" }}
+          style={{
+            padding: "10px 24px", fontSize: 14, fontWeight: 600, border: "none",
+            borderRadius: "var(--radius-sm)", cursor: "pointer",
+            color: "#fff", background: "var(--c-founder)",
+            display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
+          }}
         >
-          <Square size={14} /> Stop
+          ⏸ Pause
         </button>
       )}
     </div>

@@ -3,7 +3,7 @@ import { getUserId } from "@/lib/user";
 import { startOfDay } from "date-fns";
 import FinanceLogForm from "@/components/finance/FinanceLogForm";
 import NetWorthChart from "@/components/finance/NetWorthChart";
-import TaskList from "@/components/tasks/TaskList";
+import PageSidebar from "@/components/layout/PageSidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -24,20 +24,15 @@ function fmtInr(n: number | null): string {
 export default async function FinancePage() {
   const userId = getUserId();
 
-  // First of this month for upsert lookup
   const now = new Date();
   const thisMonth = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
 
-  const [thisMonthLog, last12Logs, tasks] = await Promise.all([
+  const [thisMonthLog, last12Logs] = await Promise.all([
     db.financeLog.findFirst({ where: { userId, date: thisMonth } }),
     db.financeLog.findMany({
       where: { userId },
       orderBy: { date: "asc" },
       take: 12,
-    }),
-    db.task.findMany({
-      where: { userId, section: "finance", status: { not: "cancelled" } },
-      orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
     }),
   ]);
 
@@ -47,51 +42,60 @@ export default async function FinancePage() {
   const fiPct    = latest?.fiProgressPct ?? null;
 
   const topStats = [
-    { label: "Net Worth",       value: fmtInr(netWorth),                    color: "var(--finance)"  },
-    { label: "Liquid Cash",     value: fmtInr(latest?.liquidCashInr ?? null), color: "var(--text)"   },
-    { label: "Monthly Savings", value: fmtInr(latest?.monthlySavingsInr ?? null), color: "var(--accent)" },
-    { label: "FI Progress",     value: fiPct != null ? `${fiPct}%` : "—",   color: "var(--gold)"     },
+    { label: "Net Worth",       value: fmtInr(netWorth),                         color: "var(--finance)"  },
+    { label: "Liquid Cash",     value: fmtInr(latest?.liquidCashInr ?? null),    color: "var(--text)"     },
+    { label: "Monthly Savings", value: fmtInr(latest?.monthlySavingsInr ?? null), color: "var(--accent)"  },
+    { label: "FI Progress",     value: fiPct != null ? `${fiPct}%` : "—",        color: "var(--gold)"     },
   ];
 
   return (
-    <div className="p-4 lg:p-6 max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: "var(--finance)" }}>Finance</h1>
-        <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>Monthly wealth snapshot</p>
+    <div style={{ padding: "24px 20px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--finance)", margin: 0 }}>Finance</h1>
+        <p style={{ fontSize: 13, marginTop: 2, color: "var(--text-muted)", margin: "2px 0 0" }}>Monthly wealth snapshot</p>
       </div>
 
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_300px] gap-4">
-        <div className="flex flex-col gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 16, alignItems: "start" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
           {/* Top stats + runway */}
           <div
-            className="rounded-xl p-4"
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
+            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
           >
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
               {topStats.map(({ label, value, color }) => (
-                <div key={label} className="rounded-lg p-3" style={{ background: "var(--bg-soft)" }}>
-                  <p className="text-xs mb-0.5" style={{ color: "var(--text-muted)" }}>{label}</p>
-                  <p className="text-lg font-bold leading-tight" style={{ color }}>{value}</p>
+                <div key={label} style={{ background: "var(--bg-soft)", borderRadius: 8, padding: 12 }}>
+                  <p style={{ fontSize: 12, marginBottom: 2, color: "var(--text-muted)", margin: "0 0 2px" }}>{label}</p>
+                  <p style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.2, color, margin: 0 }}>{value}</p>
                 </div>
               ))}
             </div>
 
             {/* Runway card */}
             <div
-              className="rounded-lg p-3 flex items-center justify-between"
-              style={{ background: "var(--bg-soft)", border: `1px solid ${runway != null ? runwayColor(runway) : "var(--border)"}20` }}
+              style={{
+                background: "var(--bg-soft)",
+                border: `1px solid ${runway != null ? runwayColor(runway) : "var(--border)"}`,
+                borderRadius: 8,
+                padding: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
             >
               <div>
-                <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Personal Runway</p>
-                <p className="text-2xl font-bold mt-0.5" style={{ color: runway != null ? runwayColor(runway) : "var(--text-muted)" }}>
+                <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-muted)", margin: "0 0 2px" }}>Personal Runway</p>
+                <p style={{ fontSize: 24, fontWeight: 700, marginTop: 2, color: runway != null ? runwayColor(runway) : "var(--text-muted)", margin: 0 }}>
                   {runway != null ? `${runway} months` : "—"}
                 </p>
               </div>
               {runway != null && (
                 <div
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full"
                   style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    padding: "6px 12px",
+                    borderRadius: 9999,
                     background: runwayColor(runway) + "20",
                     color: runwayColor(runway),
                   }}
@@ -107,26 +111,14 @@ export default async function FinancePage() {
 
           {/* Net worth chart */}
           <div
-            className="rounded-xl p-4"
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
+            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
           >
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Net Worth — last 12 months</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: "var(--text)", margin: "0 0 16px" }}>Net Worth — last 12 months</h2>
             <NetWorthChart data={last12Logs} />
           </div>
         </div>
 
-        {/* Right column — tasks */}
-        <div
-          className="rounded-xl p-4 h-fit lg:sticky lg:top-6"
-          style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-        >
-          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>Finance Tasks</h2>
-          <TaskList
-            initialTasks={tasks as any}
-            section="finance"
-            defaultSection="finance"
-          />
-        </div>
+        <PageSidebar section="finance" accentColor="var(--c-finance)" />
       </div>
     </div>
   );

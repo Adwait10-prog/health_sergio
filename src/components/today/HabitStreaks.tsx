@@ -1,95 +1,258 @@
-import type { DailyLogModel } from "@/generated/prisma/models/DailyLog";
+"use client";
+import { useState } from "react";
 import { calcHabitStreak } from "@/lib/scores";
+import type { DailyLogModel } from "@/generated/prisma/models/DailyLog";
 
 interface HabitDef {
   field: keyof DailyLogModel;
-  label: string;
-  emoji: string;
+  name: string;
+  icon: string;
   color: string;
 }
 
 const HABITS: HabitDef[] = [
-  { field: "didWorkout",  label: "Workout",  emoji: "🏃", color: "var(--fitness)" },
-  { field: "didCode",     label: "Code",     emoji: "💻", color: "var(--technical)" },
-  { field: "didRead",     label: "Read",     emoji: "📖", color: "var(--gold)" },
-  { field: "didLearn",    label: "Learn",    emoji: "🎓", color: "#8B5CF6" },
-  { field: "didNetwork",  label: "Network",  emoji: "🤝", color: "var(--founder)" },
-  { field: "didJournal",  label: "Journal",  emoji: "✍️", color: "var(--warn)" },
-  { field: "didMeditate", label: "Meditate", emoji: "🧘", color: "#06B6D4" },
+  { field: "didWorkout",  name: "Workout",  icon: "🏃", color: "var(--c-fitness)" },
+  { field: "didCode",     name: "Code",     icon: "💻", color: "var(--c-technical)" },
+  { field: "didRead",     name: "Read",     icon: "📖", color: "var(--c-today)" },
+  { field: "didLearn",    name: "Learn",    icon: "🎓", color: "var(--c-founder)" },
+  { field: "didNetwork",  name: "Network",  icon: "🤝", color: "var(--c-founder)" },
+  { field: "didJournal",  name: "Journal",  icon: "✍️", color: "var(--c-reflection)" },
+  { field: "didMeditate", name: "Meditate", icon: "🧘", color: "var(--c-reflection)" },
 ];
 
-// Day labels for the 7 dots, newest-first → oldest is index 6
-const DAY_LABELS = ["T", "Y", "2d", "3d", "4d", "5d", "6d"];
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+const CELL = 36;
+const GAP = 6;
+const WEEK_W = 7 * CELL + 6 * GAP;
+const LABEL_W = 130;
+const WEEK_GAP = 24;
 
 interface Props {
-  logs: DailyLogModel[]; // last 7 days, newest first
+  logs: DailyLogModel[];
+  today: Date;
 }
 
-export default function HabitStreaks({ logs }: Props) {
-  const totalStreaks = HABITS.filter(({ field }) => calcHabitStreak(logs, field) > 0).length;
+function getMondayOf(d: Date): Date {
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const m = new Date(d);
+  m.setDate(d.getDate() + diff);
+  m.setHours(0, 0, 0, 0);
+  return m;
+}
 
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold" style={{ color: "var(--text)" }}>Habit Streaks</h2>
-        <span className="text-xs font-medium px-2 py-0.5 rounded-full"
-          style={{
-            background: totalStreaks >= 5 ? "var(--accent-soft)" : "var(--bg-soft)",
-            color: totalStreaks >= 5 ? "var(--accent-strong)" : "var(--text-muted)",
-          }}>
-          {totalStreaks} / {HABITS.length} active
-        </span>
-      </div>
+export default function HabitStreaks({ logs, today }: Props) {
+  const [showHistory, setShowHistory] = useState(false);
 
-      {/* Day header */}
-      <div className="flex items-center gap-3 mb-2 pl-[calc(24px+12px+64px+12px)]">
-        {DAY_LABELS.map((d) => (
-          <div key={d} className="w-4 h-4 flex items-center justify-center">
-            <span className="text-center leading-none" style={{ color: "var(--text-muted)", fontSize: 9, fontWeight: 600 }}>
-              {d}
-            </span>
-          </div>
-        ))}
-      </div>
+  const logMap = new Map<string, DailyLogModel>();
+  for (const log of logs) {
+    const istMs = new Date(log.date).getTime() + 5.5 * 60 * 60 * 1000;
+    const dateStr = new Date(istMs).toISOString().split("T")[0];
+    logMap.set(dateStr, log);
+  }
 
-      <div className="flex flex-col gap-2">
-        {HABITS.map(({ field, label, emoji, color }) => {
-          const streak = calcHabitStreak(logs, field);
-          const last7 = logs.slice(0, 7);
-          const todayDone = last7[0]?.[field] === true;
+  const istNow = new Date(today.getTime() + 5.5 * 60 * 60 * 1000);
+  const todayIST = istNow.toISOString().split("T")[0];
+  const currentMonday = getMondayOf(today);
+
+  const weeks = Array.from({ length: 4 }, (_, wi) => {
+    const monday = new Date(currentMonday);
+    monday.setDate(currentMonday.getDate() - wi * 7);
+    const days = Array.from({ length: 7 }, (_, di) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + di);
+      const dateStr = [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, "0"),
+        String(d.getDate()).padStart(2, "0"),
+      ].join("-");
+      return { dateStr, date: d.getDate(), isFuture: dateStr > todayIST, isToday: dateStr === todayIST };
+    });
+    const label = wi === 0 ? "This week"
+      : wi === 1 ? "Last week"
+      : MONTH_NAMES[monday.getMonth()] + " " + monday.getDate();
+    return { days, label, isCurrentWeek: wi === 0 };
+  });
+
+  const thisWeek = weeks[0];
+  const pastWeeks = weeks.slice(1);
+  const activeCount = HABITS.filter((h) => calcHabitStreak(logs, h.field) > 0).length;
+
+  function DayCells({ week, h, stretch }: { week: typeof weeks[0]; h: typeof HABITS[0]; stretch?: boolean }) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: stretch ? "repeat(7, 1fr)" : `repeat(7, ${CELL}px)`, gap: GAP, width: stretch ? "100%" : undefined }}>
+        {week.days.map((day, di) => {
+          const log = logMap.get(day.dateStr);
+          const done = log?.[h.field] === true;
+          const isFut = day.isFuture && week.isCurrentWeek;
           return (
-            <div key={field} className="flex items-center gap-3">
-              <span className="text-base w-6 text-center shrink-0">{emoji}</span>
-              <span className="text-sm w-16 shrink-0 font-medium" style={{ color: todayDone ? "var(--text)" : "var(--text-dim)" }}>
-                {label}
-              </span>
-              <div className="flex gap-1">
-                {Array.from({ length: 7 }).map((_, i) => {
-                  const done = last7[i]?.[field] === true;
-                  const isToday = i === 0;
-                  return (
-                    <div
-                      key={String(i)}
-                      className="w-4 h-4 rounded-full transition-all"
-                      style={{
-                        background: done ? color : "var(--bg-soft)",
-                        boxShadow: done && isToday ? `0 0 6px ${color}80` : "none",
-                        transform: done && isToday ? "scale(1.15)" : "scale(1)",
-                      }}
-                    />
-                  );
-                })}
+            <div key={di} style={{ display: "flex", justifyContent: "center" }}>
+              <div style={{
+                width: CELL, height: CELL, borderRadius: 8,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: isFut ? "var(--bg-subtle)" : done ? h.color : day.isToday ? "var(--surface)" : "var(--bg-subtle)",
+                border: isFut
+                  ? "1.5px dashed var(--border)"
+                  : done ? "none"
+                  : day.isToday ? "2px dashed " + h.color + "70"
+                  : "1.5px solid var(--border-light)",
+                opacity: isFut ? 0.4 : 1,
+                boxShadow: done ? "0 1px 4px " + h.color + "40" : "none",
+              }}>
+                {done && (
+                  <svg width="14" height="14" viewBox="0 0 14 14">
+                    <path d="M3 7l3 3 5-5" fill="none" stroke="#fff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
               </div>
-              <span className="text-xs font-semibold ml-auto" style={{ color: streak > 0 ? color : "var(--text-muted)" }}>
-                {streak > 0 ? `${streak}d 🔥` : "—"}
-              </span>
             </div>
           );
         })}
       </div>
+    );
+  }
+
+  function DayHeaders({ week, stretch }: { week: typeof weeks[0]; stretch?: boolean }) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: stretch ? "repeat(7, 1fr)" : `repeat(7, ${CELL}px)`, gap: GAP, width: stretch ? "100%" : undefined }}>
+        {DAY_LABELS.map((d, di) => {
+          const day = week.days[di];
+          return (
+            <div key={di} style={{ textAlign: "center", width: CELL }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: day.isToday ? "var(--c-today)" : "var(--text-4)" }}>{d}</div>
+              <div style={{ fontSize: 10, color: day.isToday ? "var(--c-today)" : "var(--text-4)", opacity: 0.6, marginTop: 1 }}>{day.date}</div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      background: "var(--surface)",
+      borderRadius: "var(--radius)",
+      border: "1px solid var(--border)",
+      padding: 28,
+      boxShadow: "var(--shadow)",
+    }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>Habit Streaks</h2>
+        <span style={{
+          fontSize: 12, fontWeight: 600, color: "var(--c-today)",
+          background: "var(--c-today-bg)", padding: "4px 12px", borderRadius: 20,
+        }}>
+          {activeCount} / {HABITS.length} active
+        </span>
+      </div>
+
+      {/* Scrollable area — only active when history is shown */}
+      <div style={{
+        overflowX: showHistory ? "auto" : "visible",
+        scrollbarWidth: "thin",
+        scrollbarColor: "var(--border) transparent",
+      }}>
+        <div style={{ width: "100%" }}>
+
+          {/* Column headers */}
+          <div style={{ display: "flex", alignItems: "flex-end", marginBottom: 8 }}>
+            <div style={{ width: LABEL_W, flexShrink: 0 }} />
+
+            {/* This week */}
+            <div style={{ flex: showHistory ? "0 0 auto" : 1, marginRight: showHistory ? WEEK_GAP : 0, minWidth: 0 }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase",
+                color: "var(--c-today)", marginBottom: 6,
+              }}>This week</div>
+              <DayHeaders week={thisWeek} stretch={!showHistory} />
+            </div>
+
+            {/* Past weeks */}
+            {showHistory && pastWeeks.map((week, wi) => (
+              <div key={wi} style={{ flexShrink: 0, marginRight: wi < 2 ? WEEK_GAP : 0 }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase",
+                  color: "var(--text-4)", marginBottom: 6,
+                }}>{week.label}</div>
+                <DayHeaders week={week} />
+              </div>
+            ))}
+          </div>
+
+          {/* Habit rows */}
+          {HABITS.map((h, hi) => {
+            const streak = calcHabitStreak(logs, h.field);
+            return (
+              <div key={h.field} style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "6px 0",
+                borderTop: hi === 0 ? "1px solid var(--border-light)" : "none",
+                borderBottom: "1px solid var(--border-light)",
+              }}>
+                {/* Label */}
+                <div style={{ width: LABEL_W, display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{h.icon}</span>
+                  <span style={{
+                    fontSize: 13, fontWeight: 600,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                    color: streak > 0 ? "var(--text-1)" : "var(--text-3)",
+                  }}>{h.name}</span>
+                </div>
+
+                {/* This week */}
+                <div style={{ flex: showHistory ? "0 0 auto" : 1, marginRight: showHistory ? WEEK_GAP : 0, minWidth: 0 }}>
+                  <DayCells week={thisWeek} h={h} stretch={!showHistory} />
+                </div>
+
+                {/* Past weeks */}
+                {showHistory && pastWeeks.map((week, wi) => (
+                  <div key={wi} style={{ flexShrink: 0, marginRight: wi < 2 ? WEEK_GAP : 0 }}>
+                    <DayCells week={week} h={h} />
+                  </div>
+                ))}
+
+                {/* Streak badge */}
+                <div style={{ marginLeft: 12, minWidth: 60, textAlign: "right", flexShrink: 0 }}>
+                  {streak > 0 ? (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700,
+                      color: h.color, background: h.color + "15",
+                      padding: "3px 9px", borderRadius: 12, whiteSpace: "nowrap",
+                    }}>{streak}d 🔥</span>
+                  ) : (
+                    <span style={{ fontSize: 13, color: "var(--text-4)" }}>—</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+        </div>
+      </div>
+
+      {/* Toggle */}
+      <button
+        onClick={() => setShowHistory(!showHistory)}
+        style={{
+          marginTop: 12,
+          fontSize: 12, fontWeight: 600,
+          color: "var(--text-3)",
+          background: "none", border: "none", cursor: "pointer",
+          padding: 0, display: "flex", alignItems: "center", gap: 5,
+        }}
+      >
+        <span style={{
+          display: "inline-block",
+          transform: showHistory ? "rotate(90deg)" : "rotate(-90deg)",
+          transition: "transform 0.2s",
+          fontSize: 9, opacity: 0.7,
+        }}>▼</span>
+        {showHistory ? "Hide history" : "Show past 3 weeks"}
+      </button>
     </div>
   );
 }

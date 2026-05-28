@@ -7,36 +7,36 @@ const SECTIONS = [
   {
     title: "Net Worth",
     fields: [
-      { key: "netWorthInr",       label: "Net worth (₹)"        },
-      { key: "liquidCashInr",     label: "Liquid cash (₹)"      },
-      { key: "monthlySavingsInr", label: "Monthly savings (₹)"  },
-      { key: "emergencyFundMonths", label: "Emergency fund (months)" },
+      { key: "netWorthInr",         label: "Net worth (₹)"           },
+      { key: "liquidCashInr",       label: "Liquid cash (₹)"         },
+      { key: "monthlySavingsInr",   label: "Monthly savings (₹)"     },
+      { key: "emergencyFundMonths", label: "Emergency fund (months)"  },
     ],
   },
   {
     title: "Income",
     fields: [
-      { key: "salaryInr",      label: "Salary (₹)"         },
-      { key: "freelanceInr",   label: "Freelance (₹)"      },
-      { key: "sideProjectInr", label: "Side projects (₹)"  },
+      { key: "salaryInr",      label: "Salary (₹)"        },
+      { key: "freelanceInr",   label: "Freelance (₹)"     },
+      { key: "sideProjectInr", label: "Side projects (₹)" },
     ],
   },
   {
     title: "Investments",
     fields: [
-      { key: "equityPortfolioInr",  label: "Equity portfolio (₹)" },
-      { key: "mutualFundsInr",      label: "Mutual funds (₹)"     },
-      { key: "sipContributionsInr", label: "SIP contributions (₹)"},
-      { key: "goldInr",             label: "Gold (₹)"             },
+      { key: "equityPortfolioInr",  label: "Equity portfolio (₹)"  },
+      { key: "mutualFundsInr",      label: "Mutual funds (₹)"      },
+      { key: "sipContributionsInr", label: "SIP contributions (₹)" },
+      { key: "goldInr",             label: "Gold (₹)"              },
     ],
   },
   {
     title: "Runway",
     fields: [
-      { key: "burnRateInr",          label: "Monthly burn (₹)"     },
-      { key: "personalRunwayMonths", label: "Runway (months)"      },
-      { key: "startupCapitalInr",    label: "Startup capital (₹)"  },
-      { key: "fiProgressPct",        label: "FI progress (%)"      },
+      { key: "burnRateInr",          label: "Monthly burn (₹)"    },
+      { key: "personalRunwayMonths", label: "Runway (months)"     },
+      { key: "startupCapitalInr",    label: "Startup capital (₹)" },
+      { key: "fiProgressPct",        label: "FI progress (%)"     },
     ],
   },
 ];
@@ -77,27 +77,48 @@ export default function FinanceLogForm({ existing }: Props) {
     setTimeout(() => setStatus("idle"), 2500);
   }
 
+  const inputStyle: React.CSSProperties = {
+    background: "var(--bg-soft)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "8px 10px",
+    color: "var(--text)",
+    fontSize: 13,
+    width: "100%",
+    boxSizing: "border-box",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "var(--text-muted)",
+    display: "block",
+    marginBottom: 4,
+  };
+
   return (
     <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
+      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
     >
-      <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--text)" }}>Monthly Snapshot</h2>
-      <form onSubmit={save} className="flex flex-col gap-5">
+      <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: "var(--text)", margin: "0 0 16px" }}>Monthly Snapshot</h2>
+      <form onSubmit={save} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {SECTIONS.map(({ title, fields }) => (
           <div key={title}>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>{title}</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-muted)", margin: "0 0 8px" }}>
+              {title}
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px" }}>
               {fields.map(({ key, label }) => (
                 <div key={key}>
-                  <label className="text-xs font-medium block mb-1" style={{ color: "var(--text-muted)" }}>{label}</label>
+                  <label style={labelStyle}>{label}</label>
                   <input
-                    type="number" min={0} step="any"
+                    type="number"
+                    min={0}
+                    step="any"
                     value={values[key]}
                     onChange={(e) => setValues((p) => ({ ...p, [key]: e.target.value }))}
                     placeholder="0"
-                    className="w-full px-2.5 py-1.5 rounded-lg text-sm border"
-                    style={{ borderColor: "var(--border)", background: "var(--bg-soft)", color: "var(--text)" }}
+                    style={inputStyle}
                   />
                 </div>
               ))}
@@ -106,22 +127,29 @@ export default function FinanceLogForm({ existing }: Props) {
         ))}
 
         <div>
-          <label className="text-xs font-medium block mb-1" style={{ color: "var(--text-muted)" }}>Notes</label>
+          <label style={labelStyle}>Notes</label>
           <textarea
-            value={notes} onChange={(e) => setNotes(e.target.value)}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             placeholder="Any financial notes this month…"
             rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm border resize-none"
-            style={{ borderColor: "var(--border)", background: "var(--bg-soft)", color: "var(--text)" }}
+            style={{ ...inputStyle, resize: "none" }}
           />
         </div>
 
         <button
-          type="submit" disabled={status === "saving"}
-          className="py-2 rounded-lg text-sm font-semibold"
+          type="submit"
+          disabled={status === "saving"}
           style={{
             background: status === "saved" ? "var(--accent-soft)" : "var(--finance)",
             color: status === "saved" ? "var(--accent-strong)" : "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 0",
+            fontSize: 13,
+            fontWeight: 700,
+            width: "100%",
+            cursor: "pointer",
             opacity: status === "saving" ? 0.7 : 1,
           }}
         >

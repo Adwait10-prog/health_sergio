@@ -2,12 +2,14 @@ import { getTodayHMSession, getLast7HMSessions, getCurrentWeekHMStats, getRaceCo
 import { isStravaConnected, formatPace, formatDistance, formatDuration } from "@/lib/strava";
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
-import { subDays } from "date-fns";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, startOfWeek, subWeeks, subDays } from "date-fns";
+import { daysAgoUTC } from "@/lib/date";
 import StravaConnect from "@/components/fitness/StravaConnect";
+import FitnessCharts from "@/components/fitness/FitnessCharts";
 
 export const dynamic = "force-dynamic";
 
+// ── Type helpers ──────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   gym_lc:       { bg: "#FEF3C7", text: "#B45309", label: "Gym LC"    },
   gym_ub:       { bg: "#FEF3C7", text: "#B45309", label: "Gym UB"    },
@@ -23,435 +25,326 @@ const TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> =
 function typeChip(type: string) {
   const c = TYPE_COLORS[type] ?? { bg: "#F0F3F8", text: "#94A3B8", label: type };
   return (
-    <span
-      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-      style={{ background: c.bg, color: c.text }}
-    >
+    <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: c.bg, color: c.text }}>
       {c.label}
     </span>
   );
 }
 
 function StatusDot({ status }: { status: string | null }) {
-  if (status === "done")    return <span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" />;
-  if (status === "partial") return <span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" />;
-  if (status === "skipped") return <span className="inline-block w-2.5 h-2.5 rounded-full bg-orange-400" />;
-  return <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: "var(--border)" }} />;
+  const color = status === "done" ? "#22C55E" : status === "partial" ? "#FBBF24" : status === "skipped" ? "#FB923C" : "var(--border)";
+  return <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: color, flexShrink: 0 }} />;
 }
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
-const STRAVA_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  Run:           { bg: "#D1FAE5", color: "#065F46" },
-  TrailRun:      { bg: "#A7F3D0", color: "#065F46" },
-  Ride:          { bg: "#DBEAFE", color: "#1D4ED8" },
-  VirtualRide:   { bg: "#EDE9FE", color: "#6D28D9" },
-  Swim:          { bg: "#BAE6FD", color: "#0369A1" },
-  WeightTraining:{ bg: "#FEF3C7", color: "#B45309" },
-  Workout:       { bg: "#FEF3C7", color: "#B45309" },
-  Walk:          { bg: "#F0F3F8", color: "#94A3B8" },
-};
-
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default async function FitnessPage() {
-  const userId       = getUserId();
-  const today        = getTodayHMSession();
-  const last7        = getLast7HMSessions();
-  const weekStats    = getCurrentWeekHMStats();
-  const daysToRace   = getRaceCountdown();
+  const userId          = getUserId();
+  const today           = getTodayHMSession();
+  const last7           = getLast7HMSessions();
+  const weekStats       = getCurrentWeekHMStats();
+  const daysToRace      = getRaceCountdown();
   const stravaConnected = await isStravaConnected();
 
-  const [recentActivities, latestActivity] = await Promise.all([
-    db.stravaActivity.findMany({
-      where: { userId },
-      orderBy: { date: "desc" },
-      take: 10,
-    }),
-    db.stravaActivity.findFirst({
-      where: { userId },
-      orderBy: { date: "desc" },
-    }),
-  ]);
+  // All Strava activities (all time for charts)
+  const allActivities = await db.stravaActivity.findMany({
+    where: { userId },
+    orderBy: { date: "desc" },
+  });
 
-  // This week's Strava km (runs only)
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
-  weekStart.setHours(0, 0, 0, 0);
-  const weekStravaKm = recentActivities
-    .filter(a => new Date(a.date) >= weekStart && ["Run","TrailRun"].includes(a.type))
+  // ── Weekly km buckets (last 10 weeks) ───────────────────────────────────
+  const weekBuckets = Array.from({ length: 10 }, (_, i) => {
+    const wStart = startOfWeek(subWeeks(new Date(), 9 - i), { weekStartsOn: 1 });
+    const wEnd   = new Date(wStart); wEnd.setDate(wStart.getDate() + 7);
+    const wActs  = allActivities.filter(a => {
+      const d = new Date(a.date);
+      return d >= wStart && d < wEnd;
+    });
+    const kmRun  = wActs
+      .filter(a => a.type === "Run" || a.type === "TrailRun")
+      .reduce((s, a) => s + (a.distanceM ?? 0) / 1000, 0);
+    const kmTotal = wActs.reduce((s, a) => s + (a.distanceM ?? 0) / 1000, 0);
+    const hrRuns  = wActs.filter(a => a.avgHeartRate);
+    const avgHR   = hrRuns.length > 0 ? Math.round(hrRuns.reduce((s, a) => s + (a.avgHeartRate ?? 0), 0) / hrRuns.length) : null;
+    const label   = i === 9 ? "This wk" : i === 8 ? "Last wk" : `${9 - i}wk ago`;
+    return { label, weekStart: wStart.toISOString(), kmRun: Math.round(kmRun * 10) / 10, kmTotal: Math.round(kmTotal * 10) / 10, sessions: wActs.length, avgHR };
+  });
+
+  // Current week Strava km (this week's runs)
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const currentWeekKm = allActivities
+    .filter(a => new Date(a.date) >= weekStart && (a.type === "Run" || a.type === "TrailRun"))
     .reduce((s, a) => s + (a.distanceM ?? 0) / 1000, 0);
 
-  const weekPct = weekStats.targetKm > 0
-    ? Math.min(100, Math.round((Math.max(weekStats.doneKm, weekStravaKm) / weekStats.targetKm) * 100))
-    : 0;
+  // Serialise for client component
+  const activitiesForChart = allActivities.map(a => ({
+    date: a.date.toISOString(),
+    type: a.type,
+    distanceM: a.distanceM,
+    movingTimeSec: a.movingTimeSec,
+    avgHeartRate: a.avgHeartRate,
+    avgSpeedMps: a.avgSpeedMps,
+    totalElevationM: a.totalElevationM,
+  }));
+
+  // ── Health data (last 7 days) ────────────────────────────────────────────
+  const healthLogs = await db.dailyLog.findMany({
+    where: { userId, date: { gte: daysAgoUTC(7) } },
+    orderBy: { date: "desc" },
+    take: 7,
+  });
+  const latestLog = healthLogs[0] ?? null;
+
+  // ── Race progress ────────────────────────────────────────────────────────
+  const raceDate   = new Date("2026-10-18");
+  const trainStart = new Date("2026-05-04"); // Wk 1
+  const totalDays  = Math.round((raceDate.getTime() - trainStart.getTime()) / 864e5);
+  const doneDays   = Math.round((new Date().getTime() - trainStart.getTime()) / 864e5);
+  const racePct    = Math.min(100, Math.max(0, Math.round((doneDays / totalDays) * 100)));
+
+  const card: React.CSSProperties = {
+    background: "var(--surface)", borderRadius: "var(--radius)",
+    border: "1px solid var(--border)", padding: 20, boxShadow: "var(--shadow)",
+  };
 
   return (
-    <div className="p-4 lg:p-6 max-w-5xl">
-      <div className="mb-6 flex items-start justify-between">
+    <div style={{ padding: "24px 28px", maxWidth: 1100 }}>
+
+      {/* ── Header ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--fitness)" }}>Fitness</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--text-muted)" }}>HM Training · Vedanta Delhi Half Marathon</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--c-fitness)", margin: 0 }}>Fitness</h1>
+          <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 2 }}>
+            Wk {weekStats.weekNum} of 24 · Vedanta Delhi Half Marathon
+          </p>
         </div>
-        <StravaConnect connected={stravaConnected} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <StravaConnect connected={stravaConnected} />
+          {stravaConnected && (
+            <a
+              href="/api/strava/sync"
+              style={{
+                fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: "var(--radius-sm)",
+                background: "var(--c-fitness-bg)", color: "var(--c-fitness)",
+                border: "1px solid #A7E3BC", textDecoration: "none",
+              }}
+            >
+              ↻ Sync
+            </a>
+          )}
+        </div>
       </div>
 
-      <div className="flex flex-col lg:grid lg:grid-cols-[1fr_300px] gap-4">
-        {/* Left column */}
-        <div className="flex flex-col gap-4">
+      {/* ── 2-col layout ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 272px", gap: 16 }}>
 
-          {/* Race countdown + week badge */}
-          <div
-            className="rounded-xl p-4 flex items-center justify-between"
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-          >
-            <div>
-              <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Race day</p>
-              <p className="text-xl font-bold mt-0.5" style={{ color: "var(--fitness)" }}>
-                {daysToRace} days to go
-              </p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>18 Oct 2026 · Vedanta Delhi HM</p>
+        {/* ══ LEFT: analytics ══ */}
+        <div>
+          <FitnessCharts
+            activities={activitiesForChart}
+            weekBuckets={weekBuckets}
+            currentWeekKm={Math.round(currentWeekKm * 10) / 10}
+            currentWeekTargetKm={weekStats.targetKm}
+          />
+        </div>
+
+        {/* ══ RIGHT: sidebar ══ */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "sticky", top: 24, alignSelf: "start" }}>
+
+          {/* Race countdown */}
+          <div style={{ ...card, padding: 18, background: "var(--c-fitness-bg)", border: "1px solid #A7E3BC" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--c-fitness)" }}>
+                Race day
+              </span>
+              <span style={{ fontSize: 11, color: "var(--c-fitness)", opacity: 0.7 }}>18 Oct 2026</span>
             </div>
-            <div
-              className="text-center px-4 py-2 rounded-xl"
-              style={{ background: "var(--bg-soft)", border: "1px solid var(--border)" }}
-            >
-              <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Week</p>
-              <p className="text-2xl font-bold" style={{ color: "var(--fitness)" }}>{weekStats.weekNum}</p>
-              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>of 24</p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
+              <span style={{ fontSize: 36, fontWeight: 800, color: "var(--c-fitness)", lineHeight: 1 }}>{daysToRace}</span>
+              <span style={{ fontSize: 13, color: "var(--c-fitness)", opacity: 0.8 }}>days to go</span>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--c-fitness)", marginBottom: 8, opacity: 0.8 }}>Vedanta Delhi Half Marathon</div>
+            {/* Progress bar */}
+            <div style={{ height: 5, background: "rgba(36,139,82,0.15)", borderRadius: 3 }}>
+              <div style={{ width: `${racePct}%`, height: "100%", background: "var(--c-fitness)", borderRadius: 3, transition: "width 1s ease" }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+              <span style={{ fontSize: 9, color: "var(--c-fitness)", opacity: 0.6 }}>Training started</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "var(--c-fitness)" }}>{racePct}%</span>
             </div>
           </div>
 
           {/* Today's session */}
-          <div
-            className="rounded-xl p-4"
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "var(--text-muted)" }}>Today</p>
+          <div style={card}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-4)", margin: "0 0 12px" }}>
+              Today · Wk {weekStats.weekNum}
+            </p>
             {today ? (
               <div>
-                <div className="flex items-start justify-between gap-2 mb-3">
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      {typeChip(today.type)}
-                      {today.logStatus && (
-                        <span className="flex items-center gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
-                          <StatusDot status={today.logStatus} />
-                          {today.logStatus}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-base font-semibold" style={{ color: "var(--text)" }}>{today.name}</p>
+                    <div style={{ marginBottom: 5 }}>{typeChip(today.type)}</div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>{today.name}</p>
+                    {(today.targetKm || today.targetMin) && (
+                      <p style={{ fontSize: 11, color: "var(--text-3)", margin: "4px 0 0" }}>
+                        {today.targetKm && `${today.targetKm} km`}
+                        {today.targetKm && today.targetMin && " · "}
+                        {today.targetMin && `~${today.targetMin} min`}
+                      </p>
+                    )}
                   </div>
-                  {today.targetKm && (
-                    <div className="text-right shrink-0">
-                      <p className="text-xl font-bold" style={{ color: "var(--fitness)" }}>{today.targetKm} km</p>
-                      {today.targetMin && (
-                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>~{today.targetMin} min</p>
-                      )}
-                    </div>
+                  {today.logStatus ? (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, flexShrink: 0,
+                      background: today.logStatus === "done" ? "var(--c-fitness-bg)" : today.logStatus === "partial" ? "#FBF3E2" : "var(--bg-subtle)",
+                      color: today.logStatus === "done" ? "var(--c-fitness)" : today.logStatus === "partial" ? "var(--c-today)" : "var(--text-4)",
+                    }}>
+                      {today.logStatus === "done" ? "✓ Done" : today.logStatus === "partial" ? "~ Partial" : "Skipped"}
+                    </span>
+                  ) : (
+                    <a href="/log" style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--c-fitness)", color: "#fff", textDecoration: "none", flexShrink: 0 }}>
+                      Log →
+                    </a>
                   )}
                 </div>
-                {today.logStatus && (
-                  <div className="flex gap-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                    {today.actualKm != null && (
-                      <div>
-                        <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Actual</p>
-                        <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{today.actualKm} km</p>
-                      </div>
-                    )}
-                    {today.actualMin != null && (
-                      <div>
-                        <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Duration</p>
-                        <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{today.actualMin} min</p>
-                      </div>
-                    )}
-                    {today.effort != null && (
-                      <div>
-                        <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Effort</p>
-                        <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{today.effort}/10</p>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             ) : (
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>No session scheduled for today.</p>
+              <p style={{ fontSize: 13, color: "var(--text-3)" }}>Rest day — no session scheduled.</p>
             )}
           </div>
 
-          {/* Weekly km progress */}
-          <div
-            className="rounded-xl p-4"
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
-                Week {weekStats.weekNum} km
-              </p>
-              <span className="text-xs font-semibold" style={{ color: "var(--fitness)" }}>
-                {weekStats.doneKm.toFixed(1)} / {weekStats.targetKm.toFixed(1)} km
-              </span>
-            </div>
-            <div className="rounded-full h-2 overflow-hidden" style={{ background: "var(--bg-soft)" }}>
-              <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${weekPct}%`, background: "var(--fitness)" }}
-              />
-            </div>
-            <p className="text-xs mt-1.5 text-right" style={{ color: "var(--text-muted)" }}>{weekPct}% complete</p>
-
-            {/* Week sessions grid */}
-            <div className="grid grid-cols-7 gap-1.5 mt-4">
+          {/* Week strip */}
+          <div style={card}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-4)", margin: "0 0 12px" }}>
+              This week
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
               {weekStats.sessions.map((s, i) => {
                 const c = TYPE_COLORS[s.type] ?? { bg: "#F0F3F8", text: "#94A3B8" };
                 return (
-                  <div key={s.id} className="flex flex-col items-center gap-1">
-                    <div
-                      className="w-full rounded-md py-1.5 flex flex-col items-center relative overflow-hidden"
-                      style={{ background: c.bg, minHeight: 36 }}
-                    >
-                      {s.logStatus === "done" && (
-                        <div className="absolute inset-0 opacity-20" style={{ background: "var(--fitness)" }} />
-                      )}
-                      <span className="text-[9px] font-bold relative z-10" style={{ color: c.text }}>
-                        {DAY_LABELS[i] ?? ""}
-                      </span>
-                      {s.targetKm ? (
-                        <span className="text-[8px] relative z-10" style={{ color: c.text }}>{s.targetKm}k</span>
-                      ) : (
-                        <span className="text-[8px] relative z-10" style={{ color: c.text }}>—</span>
-                      )}
+                  <div key={s.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                    <div style={{ width: "100%", borderRadius: 6, padding: "5px 2px", display: "flex", flexDirection: "column", alignItems: "center", background: c.bg, minHeight: 32, position: "relative", overflow: "hidden" }}>
+                      {s.logStatus === "done" && <div style={{ position: "absolute", inset: 0, background: "var(--c-fitness)", opacity: 0.15 }} />}
+                      <span style={{ fontSize: 8, fontWeight: 700, color: c.text, position: "relative" }}>{DAY_LABELS[i]}</span>
+                      <span style={{ fontSize: 7, color: c.text, opacity: 0.75, position: "relative" }}>{s.targetKm ? `${s.targetKm}k` : "—"}</span>
                     </div>
                     <StatusDot status={s.logStatus} />
                   </div>
                 );
               })}
             </div>
+            {/* km progress */}
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-light)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                <span style={{ fontSize: 11, color: "var(--text-4)" }}>{weekStats.doneKm.toFixed(1)} done</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--c-fitness)" }}>{weekStats.targetKm} km target</span>
+              </div>
+              <div style={{ height: 5, background: "var(--bg-subtle)", borderRadius: 3 }}>
+                <div style={{ width: `${weekStats.targetKm > 0 ? Math.min(100, (weekStats.doneKm / weekStats.targetKm) * 100) : 0}%`, height: "100%", background: "var(--c-fitness)", borderRadius: 3 }} />
+              </div>
+            </div>
           </div>
 
-          {/* Latest Strava activity */}
-          {latestActivity && (
-            <div
-              className="rounded-xl p-4"
-              style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "var(--text-muted)" }}>
-                Latest Strava activity
-              </p>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                      style={{
-                        background: (STRAVA_TYPE_COLORS[latestActivity.type] ?? { bg: "#F0F3F8" }).bg,
-                        color: (STRAVA_TYPE_COLORS[latestActivity.type] ?? { color: "#94A3B8" }).color,
-                      }}
-                    >
-                      {latestActivity.type}
-                    </span>
-                    <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {format(new Date(latestActivity.date), "EEE d MMM")}
-                    </span>
-                  </div>
-                  <p className="text-base font-semibold truncate" style={{ color: "var(--text)" }}>
-                    {latestActivity.name}
-                  </p>
-                </div>
-                {latestActivity.distanceM != null && (
-                  <p className="text-xl font-bold shrink-0" style={{ color: "var(--fitness)" }}>
-                    {formatDistance(latestActivity.distanceM)}
-                  </p>
-                )}
-              </div>
-              <div className="grid grid-cols-4 gap-2 mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                {latestActivity.movingTimeSec != null && (
-                  <div>
-                    <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Duration</p>
-                    <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                      {formatDuration(latestActivity.movingTimeSec)}
-                    </p>
-                  </div>
-                )}
-                {latestActivity.avgSpeedMps != null && ["Run","TrailRun"].includes(latestActivity.type) && (
-                  <div>
-                    <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Pace</p>
-                    <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                      {formatPace(latestActivity.avgSpeedMps)}
-                    </p>
-                  </div>
-                )}
-                {latestActivity.avgHeartRate != null && (
-                  <div>
-                    <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Avg HR</p>
-                    <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                      {latestActivity.avgHeartRate} bpm
-                    </p>
-                  </div>
-                )}
-                {latestActivity.totalElevationM != null && (
-                  <div>
-                    <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>Elevation</p>
-                    <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                      {Math.round(latestActivity.totalElevationM)}m
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Strava activities list */}
-          {recentActivities.length > 0 && (
-            <div
-              className="rounded-xl p-4"
-              style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "var(--text-muted)" }}>
-                Recent activities
-              </p>
-              <div className="flex flex-col">
-                {recentActivities.slice(0, 8).map((a) => {
-                  const c = STRAVA_TYPE_COLORS[a.type] ?? { bg: "#F0F3F8", color: "#94A3B8" };
-                  return (
-                    <div
-                      key={a.id}
-                      className="flex items-center gap-3 py-2"
-                      style={{ borderBottom: "1px solid var(--border)" }}
-                    >
-                      <span
-                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
-                        style={{ background: c.bg, color: c.color }}
-                      >
-                        {a.type.slice(0, 4).toUpperCase()}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate" style={{ color: "var(--text)" }}>{a.name}</p>
-                        <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                          {format(new Date(a.date), "EEE d MMM")}
-                          {a.movingTimeSec != null ? ` · ${formatDuration(a.movingTimeSec)}` : ""}
-                        </p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        {a.distanceM != null && (
-                          <p className="text-sm font-semibold" style={{ color: "var(--fitness)" }}>
-                            {formatDistance(a.distanceM)}
-                          </p>
-                        )}
-                        {a.avgHeartRate != null && (
-                          <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                            ♥ {a.avgHeartRate}
-                          </p>
-                        )}
-                      </div>
+          {/* Last 7 days */}
+          <div style={card}>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)", margin: "0 0 12px" }}>Last 7 days</h2>
+            {last7.length === 0 ? (
+              <p style={{ fontSize: 12, color: "var(--text-3)" }}>No sessions found.</p>
+            ) : (
+              <div>
+                {last7.map((s) => (
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 0", borderBottom: "1px solid var(--border-light)" }}>
+                    <StatusDot status={s.logStatus} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-1)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</p>
+                      <p style={{ fontSize: 10, color: "var(--text-4)", margin: "1px 0 0" }}>
+                        {format(parseISO(s.date), "EEE d MMM")}
+                      </p>
                     </div>
-                  );
-                })}
+                    {typeChip(s.type)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Recovery snapshot */}
+          <div style={card}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-4)", margin: "0 0 12px" }}>
+              Recovery · yesterday
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* RHR */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>Resting HR</span>
+                {latestLog?.rhrBpm ? (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.rhrBpm <= 60 ? "var(--c-fitness)" : latestLog.rhrBpm <= 70 ? "var(--text-1)" : "#F97316" }}>
+                    {latestLog.rhrBpm} <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}>bpm</span>
+                  </span>
+                ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
+              </div>
+              {/* HRV */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>HRV</span>
+                {latestLog?.hrvMs ? (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.hrvMs >= 60 ? "var(--c-fitness)" : latestLog.hrvMs >= 40 ? "var(--text-1)" : "#F97316" }}>
+                    {latestLog.hrvMs} <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}>ms</span>
+                  </span>
+                ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
+              </div>
+              {/* VO2 Max */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>VO₂ Max</span>
+                {latestLog?.vo2MaxMlKgMin ? (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-1)" }}>
+                    {latestLog.vo2MaxMlKgMin} <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}>ml/kg/min</span>
+                  </span>
+                ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
+              </div>
+              {/* Weight */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>Weight</span>
+                {latestLog?.weightKg ? (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-1)" }}>
+                    {latestLog.weightKg} <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}>kg</span>
+                  </span>
+                ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
+              </div>
+              {/* Sleep */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 12, color: "var(--text-3)" }}>Sleep</span>
+                {latestLog?.sleepMin ? (
+                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.sleepMin >= 420 ? "var(--c-fitness)" : latestLog.sleepMin >= 360 ? "var(--text-1)" : "#F97316" }}>
+                    {Math.floor(latestLog.sleepMin / 60)}h {latestLog.sleepMin % 60}m
+                  </span>
+                ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
               </div>
             </div>
-          )}
+            {latestLog && (
+              <p style={{ fontSize: 10, color: "var(--text-4)", margin: "12px 0 0", borderTop: "1px solid var(--border-light)", paddingTop: 10 }}>
+                Last sync: {format(latestLog.date, "EEE d MMM")}
+              </p>
+            )}
+          </div>
 
-          {!stravaConnected && (
-            <div
-              className="rounded-xl p-4 flex items-center gap-3"
-              style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px dashed var(--border)" }}
-            >
-              <div className="flex-1">
-                <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Connect Strava</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                  Sync your runs and workouts. Auto-fills HM Tracker logs.
-                </p>
-              </div>
-              <a
-                href="/api/strava/connect"
-                className="px-3 py-1.5 rounded-lg text-sm font-semibold shrink-0"
-                style={{ background: "#FC4C02", color: "#fff", textDecoration: "none" }}
-              >
-                Connect →
-              </a>
-            </div>
-          )}
-
-          {/* Open HM Tracker CTA */}
+          {/* HM Tracker link */}
           <a
             href="http://localhost:3000"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-xl p-4 flex items-center justify-between"
-            style={{
-              background: "var(--bg-card)",
-              boxShadow: "var(--shadow-sm)",
-              border: "1px solid var(--border)",
-              textDecoration: "none",
-            }}
+            style={{ ...card, display: "flex", alignItems: "center", justifyContent: "space-between", textDecoration: "none", cursor: "pointer" }}
           >
             <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>Open HM Tracker</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>Log sessions · view plan · coach brief</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>Open HM Tracker</p>
+              <p style={{ fontSize: 11, color: "var(--text-3)", margin: "3px 0 0" }}>Plan · log sessions · coach brief</p>
             </div>
-            <div
-              className="px-3 py-1.5 rounded-lg text-sm font-semibold shrink-0"
-              style={{ background: "var(--fitness)", color: "#fff" }}
-            >
-              Open →
-            </div>
+            <span style={{ fontSize: 16, color: "var(--c-fitness)" }}>→</span>
           </a>
-        </div>
 
-        {/* Right column — last 7 days */}
-        <div
-          className="rounded-xl p-4 h-fit lg:sticky lg:top-6"
-          style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
-        >
-          <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>Last 7 days</h2>
-          {last7.length === 0 ? (
-            <p className="text-xs" style={{ color: "var(--text-muted)" }}>No sessions in range.</p>
-          ) : (
-            <div className="flex flex-col">
-              {last7.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center gap-2.5 py-2"
-                  style={{ borderBottom: "1px solid var(--border)" }}
-                >
-                  <StatusDot status={s.logStatus} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "var(--text)" }}>{s.name}</p>
-                    <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                      {format(parseISO(s.date), "EEE d MMM")}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    {typeChip(s.type)}
-                    {(s.actualKm ?? s.targetKm) != null && (
-                      <p className="text-[10px] mt-0.5" style={{ color: "var(--text-muted)" }}>
-                        {s.actualKm ?? s.targetKm} km
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Legend */}
-          <div className="mt-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-            <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--text-muted)" }}>Status</p>
-            <div className="flex flex-col gap-1">
-              {[
-                { color: "#22C55E", label: "Done" },
-                { color: "#FBBF24", label: "Partial" },
-                { color: "#FB923C", label: "Skipped" },
-                { color: "var(--border)", label: "Not logged" },
-              ].map(({ color, label }) => (
-                <div key={label} className="flex items-center gap-2">
-                  <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>{label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
+
     </div>
   );
 }

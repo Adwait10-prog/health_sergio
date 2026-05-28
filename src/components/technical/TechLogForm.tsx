@@ -6,13 +6,13 @@ import { useRouter } from "next/navigation";
 interface Field { key: string; label: string; max?: number }
 
 const FIELDS: Field[] = [
-  { key: "hoursCodedMin", label: "Hours coded",          max: 960 }, // stored as minutes
-  { key: "featuresShipped",   label: "Features shipped",     max: 20  },
-  { key: "bugsFixed",         label: "Bugs fixed",           max: 50  },
-  { key: "aiAgentsBuilt",     label: "AI agents built",      max: 20  },
-  { key: "promptsEngineered", label: "Prompts engineered",   max: 50  },
-  { key: "systemDesignsDone", label: "System designs",       max: 10  },
-  { key: "prsMerged",         label: "PRs merged",           max: 20  },
+  { key: "hoursCodedMin",      label: "Hours coded",        max: 960 },
+  { key: "featuresShipped",    label: "Features shipped",   max: 20  },
+  { key: "bugsFixed",          label: "Bugs fixed",         max: 50  },
+  { key: "aiAgentsBuilt",      label: "AI agents built",    max: 20  },
+  { key: "promptsEngineered",  label: "Prompts engineered", max: 50  },
+  { key: "systemDesignsDone",  label: "System designs",     max: 10  },
+  { key: "prsMerged",          label: "PRs merged",         max: 20  },
 ];
 
 interface Props {
@@ -49,7 +49,6 @@ export default function TechLogForm({ existing }: Props) {
       if (values[key] === "") return;
       const n = parseFloat(values[key]);
       if (isNaN(n)) return;
-      // convert hours back to minutes for storage
       body[key] = key === "hoursCodedMin" ? Math.round(n * 60) : Math.round(n);
     });
     if (notes) body.notes = notes;
@@ -65,19 +64,35 @@ export default function TechLogForm({ existing }: Props) {
     setTimeout(() => setStatus("idle"), 2500);
   }
 
+  const inputStyle: React.CSSProperties = {
+    background: "var(--bg-soft)",
+    border: "1px solid var(--border)",
+    borderRadius: 8,
+    padding: "8px 10px",
+    color: "var(--text)",
+    fontSize: 13,
+    width: "100%",
+    boxSizing: "border-box",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "var(--text-muted)",
+    display: "block",
+    marginBottom: 4,
+  };
+
   return (
     <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)" }}
+      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
     >
-      <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--text)" }}>Today's Log</h2>
-      <form onSubmit={save} className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+      <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--text)", margin: "0 0 12px" }}>Today's Log</h2>
+      <form onSubmit={save} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px" }}>
           {FIELDS.map(({ key, label }) => (
             <div key={key}>
-              <label className="text-xs font-medium block mb-1" style={{ color: "var(--text-muted)" }}>
-                {label}
-              </label>
+              <label style={labelStyle}>{label}</label>
               <input
                 type="number"
                 min={0}
@@ -85,32 +100,36 @@ export default function TechLogForm({ existing }: Props) {
                 value={values[key]}
                 onChange={(e) => set(key, e.target.value)}
                 placeholder={key === "hoursCodedMin" ? "0.0 hrs" : "0"}
-                className="w-full px-2.5 py-1.5 rounded-lg text-sm border"
-                style={{ borderColor: "var(--border)", background: "var(--bg-soft)", color: "var(--text)" }}
+                style={inputStyle}
               />
             </div>
           ))}
         </div>
 
         <div>
-          <label className="text-xs font-medium block mb-1" style={{ color: "var(--text-muted)" }}>Notes</label>
+          <label style={labelStyle}>Notes</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="What did you build today?"
             rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm border resize-none"
-            style={{ borderColor: "var(--border)", background: "var(--bg-soft)", color: "var(--text)" }}
+            style={{ ...inputStyle, resize: "none" }}
           />
         </div>
 
         <button
           type="submit"
           disabled={status === "saving"}
-          className="py-2 rounded-lg text-sm font-semibold transition-colors"
           style={{
             background: status === "saved" ? "var(--accent-soft)" : "var(--accent)",
             color: status === "saved" ? "var(--accent-strong)" : "#fff",
+            border: "none",
+            borderRadius: 10,
+            padding: "10px 0",
+            fontSize: 13,
+            fontWeight: 700,
+            width: "100%",
+            cursor: "pointer",
             opacity: status === "saving" ? 0.7 : 1,
           }}
         >

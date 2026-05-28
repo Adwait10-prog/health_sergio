@@ -133,18 +133,31 @@ async function autoFillHMTracker(activities: StravaActivityRaw[]) {
   if (!hmUserId) { hmDb!.close(); return; }
 
   for (const a of activities) {
-    if (!["Run", "TrailRun", "Swim"].includes(a.type)) continue;
+    if (!["Run", "TrailRun", "Swim", "WeightTraining", "Workout"].includes(a.type)) continue;
 
     // Convert UTC start_date to IST local date (sessions stored as midnight IST = 18:30 UTC prev day)
     const activityDate = new Date(a.start_date);
     const istDate = new Date(activityDate.getTime() + 5.5 * 60 * 60 * 1000);
     const dateStr = istDate.toISOString().split("T")[0]; // YYYY-MM-DD in IST
 
-    // Match only run-type sessions for runs, swim sessions for swims
-    // Sessions stored as midnight IST (18:30 UTC), so use IST offset to compare
-    const sessionTypeFilter = ["Run", "TrailRun"].includes(a.type)
-      ? `AND type IN ('easy','quality','long','race')`
-      : `AND type = 'swim'`;
+    // Match session type to Strava activity type
+    let sessionTypeFilter: string;
+    if (["Run", "TrailRun"].includes(a.type)) {
+      sessionTypeFilter = `AND type IN ('easy','quality','long','race')`;
+    } else if (a.type === "Swim") {
+      sessionTypeFilter = `AND type = 'swim'`;
+    } else {
+      // WeightTraining / Workout → try to infer gym session type from activity name
+      const nameLower = (a.name ?? "").toLowerCase();
+      if (/leg|squat|lower|lc|glute|hamstring/.test(nameLower)) {
+        sessionTypeFilter = `AND type = 'gym_lc'`;
+      } else if (/upper|ub|chest|back|shoulder|pull|push|arm/.test(nameLower)) {
+        sessionTypeFilter = `AND type IN ('gym_ub','gym_fb_light')`;
+      } else {
+        // No keyword match — match any gym session on that day (only one should exist)
+        sessionTypeFilter = `AND type IN ('gym_lc','gym_ub','gym_fb_light')`;
+      }
+    }
 
     const session = hmDb!.prepare(
       `SELECT id FROM Session WHERE date(date, '+5 hours', '30 minutes') = date(?) ${sessionTypeFilter} LIMIT 1`
@@ -162,6 +175,7 @@ async function autoFillHMTracker(activities: StravaActivityRaw[]) {
     // Insert SessionLog
     const cuid = `strava_${a.id}`;
     const loggedAt = new Date().toISOString();
+    const isGym = ["WeightTraining", "Workout"].includes(a.type);
     hmDb!.prepare(`
       INSERT INTO SessionLog (id, sessionId, userId, status, actualKm, actualMin, avgHr, maxHr, calories, effort, notes, loggedAt)
       VALUES (?, ?, ?, 'done', ?, ?, ?, ?, ?, NULL, ?, ?)
@@ -169,8 +183,8 @@ async function autoFillHMTracker(activities: StravaActivityRaw[]) {
       cuid,
       session.id,
       hmUserId,
-      a.distance / 1000,              // metres → km
-      Math.round(a.moving_time / 60), // sec → min
+      isGym ? null : a.distance / 1000,   // gym sessions have no distance
+      Math.round(a.moving_time / 60),      // sec → min
       a.average_heartrate ?? null,
       a.max_heartrate ?? null,
       a.calories ?? null,

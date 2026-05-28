@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "DailyLog" ADD COLUMN "hrvMs" INTEGER;
+ALTER TABLE "DailyLog" ADD COLUMN "vo2MaxMlKgMin" REAL;
