@@ -66,15 +66,19 @@ export async function POST(req: NextRequest) {
       console.log("Voice intent:", parsed.intent);
 
       if (parsed.intent === "meeting_note") {
+        // Sanitise fields — LLM sometimes returns [] instead of null
+        const toStr = (v: unknown) =>
+          !v || (Array.isArray(v) && v.length === 0) ? null : String(v);
+
         await db.meetingNote.create({
           data: {
             userId,
             date: today,
-            title:        parsed.title        ?? "Untitled meeting",
-            attendees:    parsed.attendees     ?? null,
-            summary:      parsed.summary       ?? null,
-            decisions:    parsed.decisions     ?? null,
-            actionItems:  parsed.actionItems   ?? null,
+            title:         toStr(parsed.title)       ?? "Untitled meeting",
+            attendees:     toStr(parsed.attendees),
+            summary:       toStr(parsed.summary),
+            decisions:     toStr(parsed.decisions),
+            actionItems:   toStr(parsed.actionItems),
             rawTranscript: transcript,
           },
         });
