@@ -67,9 +67,10 @@ export async function createCalendarEvent(params: CalendarEventParams): Promise<
   const hh = String(parsed.hours).padStart(2, "0");
   const mm = String(parsed.minutes).padStart(2, "0");
   const startIST = `${dateStr}T${hh}:${mm}:00+05:30`;
-  const endHours = parsed.hours + 1;
-  const hhEnd = String(endHours).padStart(2, "0");
-  const endIST = `${dateStr}T${hhEnd}:${mm}:00+05:30`;
+  const endTotalMin = parsed.hours * 60 + parsed.minutes + 10;
+  const hhEnd = String(Math.floor(endTotalMin / 60)).padStart(2, "0");
+  const mmEnd = String(endTotalMin % 60).padStart(2, "0");
+  const endIST = `${dateStr}T${hhEnd}:${mmEnd}:00+05:30`;
 
   const auth = getOAuthClient();
   const calendar = google.calendar({ version: "v3", auth });
