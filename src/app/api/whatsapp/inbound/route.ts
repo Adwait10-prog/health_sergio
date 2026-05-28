@@ -5,8 +5,11 @@ import { parseWhatsAppMessage, generateWeekSummary } from "@/lib/whatsapp";
 import { transcribeWhatsAppAudio, parseVoiceTranscript } from "@/lib/voiceNote";
 import { queryMemory } from "@/lib/memoryQuery";
 import { createCalendarEvent } from "@/lib/googleCalendar";
+import Anthropic from "@anthropic-ai/sdk";
 import twilio from "twilio";
 import { subDays } from "date-fns";
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 // Empty TwiML response — tells Twilio "got it, no reply from webhook"
 // We send replies via the REST API (sendReply), not via TwiML body
@@ -497,6 +500,76 @@ export async function POST(req: NextRequest) {
         });
 
         await sendReply(from, parsed.reply || `✅ Done! "${match.title}" marked as complete.`);
+        break;
+      }
+
+      // ── Query run analysis ────────────────────────────────────────
+      case "query_run": {
+        // Get most recent run (today first, then yesterday, then last 7 days)
+        const run = await db.stravaActivity.findFirst({
+          where: {
+            userId,
+            type: { in: ["Run", "TrailRun"] },
+          },
+          orderBy: { date: "desc" },
+        });
+
+        if (!run) {
+          await sendReply(from, "No runs found in your recent Strava activities. Sync Strava first if you just finished a run 🏃");
+          break;
+        }
+
+        // Format all available metrics
+        const distKm      = run.distanceM ? (run.distanceM / 1000).toFixed(2) : null;
+        const movingMin   = run.movingTimeSec ? Math.floor(run.movingTimeSec / 60) : null;
+        const movingSec   = run.movingTimeSec ? run.movingTimeSec % 60 : null;
+        const pace        = run.distanceM && run.movingTimeSec
+          ? (() => {
+              const secPerKm = run.movingTimeSec / (run.distanceM / 1000);
+              return `${Math.floor(secPerKm / 60)}:${String(Math.round(secPerKm % 60)).padStart(2, "0")} /km`;
+            })()
+          : null;
+        const elapsedMin  = run.elapsedTimeSec ? Math.floor(run.elapsedTimeSec / 60) : null;
+        const speedKmh    = run.avgSpeedMps ? (run.avgSpeedMps * 3.6).toFixed(1) : null;
+
+        // Parse rawJson for extra fields Strava provides
+        let extraFields: Record<string, unknown> = {};
+        try { extraFields = JSON.parse(run.rawJson); } catch {}
+
+        const splits     = (extraFields.splits_metric as Array<{distance: number; moving_time: number; average_heartrate?: number; pace_zone?: number}> | undefined);
+        const splitsText = splits?.slice(0, 10).map((s, i) => {
+          const splitPace = s.moving_time / (s.distance / 1000);
+          return `km ${i + 1}: ${Math.floor(splitPace / 60)}:${String(Math.round(splitPace % 60)).padStart(2, "0")}${s.average_heartrate ? ` @ ${Math.round(s.average_heartrate)}bpm` : ""}`;
+        }).join(", ");
+
+        const context = [
+          `Run: ${run.name}`,
+          `Date: ${new Date(run.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}`,
+          distKm    && `Distance: ${distKm} km`,
+          movingMin !== null && `Moving time: ${movingMin}m ${movingSec}s`,
+          elapsedMin !== null && movingMin !== null && elapsedMin > movingMin && `Elapsed time: ${elapsedMin}m (${elapsedMin - movingMin}m stopped)`,
+          pace      && `Avg pace: ${pace}`,
+          speedKmh  && `Avg speed: ${speedKmh} km/h`,
+          run.avgHeartRate && `Avg HR: ${run.avgHeartRate} bpm`,
+          run.maxHeartRate && `Max HR: ${run.maxHeartRate} bpm`,
+          run.totalElevationM && `Elevation: ${run.totalElevationM}m gain`,
+          run.calories  && `Calories: ${run.calories} kcal`,
+          run.sufferScore && `Suffer score: ${run.sufferScore}`,
+          splitsText && `Splits: ${splitsText}`,
+        ].filter(Boolean).join("\n");
+
+        const response = await anthropic.messages.create({
+          model: "claude-haiku-4-5",
+          max_tokens: 350,
+          messages: [{
+            role: "user",
+            content: `You are Adwait's running coach. Analyse this run and give him sharp, specific feedback in 4-5 lines max. WhatsApp format, no markdown. Be direct — what went well, what the numbers say, one thing to improve or watch. Reference actual numbers.
+
+${context}`,
+          }],
+        });
+
+        await sendReply(from, (response.content[0] as { text: string }).text.trim());
         break;
       }
 

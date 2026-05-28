@@ -16,6 +16,7 @@ export interface ParsedMessage {
     | "query_tasks"    // "what are my tasks?" / "what's pending?"
     | "complete_task"  // "done with X" / "mark X as done"
     | "query_memory"   // "what did I discuss with X?" / "what happened last week with Y?"
+    | "query_run"      // "how was my run today?" / "analyse my run"
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -29,7 +30,7 @@ Your job: figure out WHAT he's saying and extract the right fields.
 
 Respond ONLY with valid JSON:
 {
-  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "unknown",
+  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "query_run" | "unknown",
   "data": {
     // For journal:
     //   journalText: the full journal entry as-is (preserve his words exactly)
@@ -121,6 +122,12 @@ Examples:
 
 - "done with the Aryan deck" / "mark lead gen code as done" / "completed the finance review"
   → intent: complete_task, keyword: "Aryan" / "lead gen code" / "finance review"
+
+- "how was my run today?" / "analyse my run" / "how did I do today?" / "break down my run"
+  → intent: query_run, data: {}
+
+- "how was my run yesterday?" / "analyse last week's long run"
+  → intent: query_run, data: {}
 
 - "what did I discuss with Sam?" / "any follow ups from the DG meeting?"
   → intent: query_memory, keywords: ["Sam"] / ["DG", "follow up"], dateHint: null, scope: "meetings"
