@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
 import { parseWhatsAppMessage, generateWeekSummary } from "@/lib/whatsapp";
+import { transcribeWhatsAppAudio, parseVoiceTranscript } from "@/lib/voiceNote";
 import twilio from "twilio";
 import { subDays } from "date-fns";
 
@@ -46,11 +47,103 @@ export async function POST(req: NextRequest) {
   const today  = todayIST();
 
   try {
-    // Voice note — transcription coming soon
+    // Voice / audio note — transcribe then parse
     if (mediaUrl) {
-      await sendReply(from,
-        "🎤 Voice notes coming soon! For now just type — write freely like you're talking to a friend."
-      );
+      await sendReply(from, "🎤 Got your voice note, transcribing...");
+
+      let transcript: string;
+      try {
+        const mediaContentType = formData.get("MediaContentType0") as string | null ?? undefined;
+        transcript = await transcribeWhatsAppAudio(mediaUrl, mediaContentType);
+        console.log("Transcript:", transcript.slice(0, 200));
+      } catch (e) {
+        console.error("Transcription error:", e);
+        await sendReply(from, "Sorry, couldn't transcribe that. Try again or just type it out 🙂");
+        return TWIML_OK;
+      }
+
+      const parsed = await parseVoiceTranscript(transcript);
+      console.log("Voice intent:", parsed.intent);
+
+      if (parsed.intent === "meeting_note") {
+        await db.meetingNote.create({
+          data: {
+            userId,
+            date: today,
+            title:        parsed.title        ?? "Untitled meeting",
+            attendees:    parsed.attendees     ?? null,
+            summary:      parsed.summary       ?? null,
+            decisions:    parsed.decisions     ?? null,
+            actionItems:  parsed.actionItems   ?? null,
+            rawTranscript: transcript,
+          },
+        });
+        // Also mark didNetwork in DailyLog if attendees mentioned
+        if (parsed.attendees) {
+          await db.dailyLog.upsert({
+            where: { userId_date: { userId, date: today } },
+            create: { userId, date: today, didNetwork: true },
+            update: { didNetwork: true },
+          });
+        }
+      } else if (parsed.intent === "journal" && parsed.journalText) {
+        // Append to today's journal — same logic as text journal
+        const existing = await db.reflection.findFirst({
+          where: { userId, date: today, type: "daily" },
+        });
+        const istNow = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
+        const timeLabel = istNow.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+        const journalText = existing?.journalText
+          ? `${existing.journalText as string}\n\n[${timeLabel} 🎤] ${parsed.journalText}`
+          : `[${timeLabel} 🎤] ${parsed.journalText}`;
+
+        await db.reflection.upsert({
+          where: { userId_date_type: { userId, date: today, type: "daily" } },
+          create: { userId, date: today, type: "daily", journalText, ...(parsed.moodScore && { weeklyScore: parsed.moodScore }) },
+          update: { journalText, ...(parsed.moodScore && { weeklyScore: parsed.moodScore }) },
+        });
+        await db.dailyLog.upsert({
+          where: { userId_date: { userId, date: today } },
+          create: { userId, date: today, didJournal: true, ...(parsed.moodScore && { moodScore: parsed.moodScore }) },
+          update: { didJournal: true, ...(parsed.moodScore && { moodScore: parsed.moodScore }) },
+        });
+      } else if (parsed.intent === "task" && parsed.taskTitle) {
+        await db.task.create({
+          data: {
+            userId,
+            title: parsed.taskTitle,
+            priority: parsed.taskPriority ?? "medium",
+            section: "work",
+            status: "todo",
+            isToday: true,
+            dueDate: today,
+          },
+        });
+      } else {
+        // General — save as journal entry
+        if (parsed.journalText) {
+          const existing = await db.reflection.findFirst({
+            where: { userId, date: today, type: "daily" },
+          });
+          const istNow = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
+          const timeLabel = istNow.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+          const journalText = existing?.journalText
+            ? `${existing.journalText as string}\n\n[${timeLabel} 🎤] ${parsed.journalText}`
+            : `[${timeLabel} 🎤] ${parsed.journalText}`;
+          await db.reflection.upsert({
+            where: { userId_date_type: { userId, date: today, type: "daily" } },
+            create: { userId, date: today, type: "daily", journalText },
+            update: { journalText },
+          });
+          await db.dailyLog.upsert({
+            where: { userId_date: { userId, date: today } },
+            create: { userId, date: today, didJournal: true },
+            update: { didJournal: true },
+          });
+        }
+      }
+
+      await sendReply(from, parsed.reply);
       return TWIML_OK;
     }
 

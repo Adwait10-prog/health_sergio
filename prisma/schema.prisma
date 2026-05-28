@@ -25,6 +25,7 @@ model User {
   stravaActivities StravaActivity[]
   hmSessions       HMSession[]
   hmSessionLogs    HMSessionLog[]
+  meetingNotes     MeetingNote[]
 }
 
 model DailyLog {
@@ -233,6 +234,24 @@ model Task {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model MeetingNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+
+  title        String   // e.g. "Call with DG Futurtech"
+  attendees    String?  // comma-separated names
+  summary      String?  // 2-3 line summary
+  decisions    String?  // key decisions made
+  actionItems  String?  // action items, one per line
+  rawTranscript String? // full Whisper transcript — kept for reference
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
 }
 
 model ClaudeAdjustment {
