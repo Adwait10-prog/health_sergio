@@ -536,26 +536,57 @@ export async function POST(req: NextRequest) {
         let extraFields: Record<string, unknown> = {};
         try { extraFields = JSON.parse(run.rawJson); } catch {}
 
-        const splits     = (extraFields.splits_metric as Array<{distance: number; moving_time: number; average_heartrate?: number; pace_zone?: number}> | undefined);
-        const splitsText = splits?.slice(0, 10).map((s, i) => {
+        // Per-km splits
+        const splits = (extraFields.splits_metric as Array<{distance: number; moving_time: number; average_heartrate?: number; pace_zone?: number}> | undefined);
+        const splitsText = splits?.slice(0, 15).map((s, i) => {
           const splitPace = s.moving_time / (s.distance / 1000);
           return `km ${i + 1}: ${Math.floor(splitPace / 60)}:${String(Math.round(splitPace % 60)).padStart(2, "0")}${s.average_heartrate ? ` @ ${Math.round(s.average_heartrate)}bpm` : ""}`;
         }).join(", ");
 
+        // Best efforts (1km, 1 mile, 5km, 10km, half marathon)
+        type BestEffort = { name: string; moving_time: number; distance: number };
+        const bestEfforts = extraFields.best_efforts as BestEffort[] | undefined;
+        const effortNames = ["1 kilometer", "1 mile", "2 kilometer", "5 kilometer", "10 kilometer", "Half-Marathon"];
+        const bestEffortsText = bestEfforts
+          ?.filter(e => effortNames.includes(e.name))
+          .map(e => {
+            const mins = Math.floor(e.moving_time / 60);
+            const secs = e.moving_time % 60;
+            return `${e.name}: ${mins}:${String(secs).padStart(2, "0")}`;
+          }).join(", ");
+
+        // Cadence
+        const cadence = extraFields.average_cadence as number | undefined;
+        const cadenceText = cadence ? `${Math.round(cadence * 2)} spm` : null; // Strava stores one-foot cadence, double for total
+
+        // Perceived exertion
+        const perceivedExertion = extraFields.perceived_exertion as number | undefined;
+
+        // Device
+        const deviceName = extraFields.device_name as string | undefined;
+
+        // Description / notes
+        const description = extraFields.description as string | undefined;
+
         const context = [
           `Run: ${run.name}`,
           `Date: ${new Date(run.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}`,
-          distKm    && `Distance: ${distKm} km`,
+          distKm          && `Distance: ${distKm} km`,
           movingMin !== null && `Moving time: ${movingMin}m ${movingSec}s`,
           elapsedMin !== null && movingMin !== null && elapsedMin > movingMin && `Elapsed time: ${elapsedMin}m (${elapsedMin - movingMin}m stopped)`,
-          pace      && `Avg pace: ${pace}`,
-          speedKmh  && `Avg speed: ${speedKmh} km/h`,
-          run.avgHeartRate && `Avg HR: ${run.avgHeartRate} bpm`,
-          run.maxHeartRate && `Max HR: ${run.maxHeartRate} bpm`,
+          pace            && `Avg pace: ${pace}`,
+          speedKmh        && `Avg speed: ${speedKmh} km/h`,
+          run.avgHeartRate  && `Avg HR: ${run.avgHeartRate} bpm`,
+          run.maxHeartRate  && `Max HR: ${run.maxHeartRate} bpm`,
           run.totalElevationM && `Elevation: ${run.totalElevationM}m gain`,
-          run.calories  && `Calories: ${run.calories} kcal`,
-          run.sufferScore && `Suffer score: ${run.sufferScore}`,
-          splitsText && `Splits: ${splitsText}`,
+          run.calories      && `Calories: ${run.calories} kcal`,
+          run.sufferScore   && `Suffer score: ${run.sufferScore}`,
+          cadenceText       && `Cadence: ${cadenceText}`,
+          perceivedExertion && `Perceived exertion: ${perceivedExertion}/10`,
+          deviceName        && `Device: ${deviceName}`,
+          description       && `Notes: ${description}`,
+          bestEffortsText   && `Best efforts — ${bestEffortsText}`,
+          splitsText        && `Per-km splits — ${splitsText}`,
         ].filter(Boolean).join("\n");
 
         const response = await anthropic.messages.create({
