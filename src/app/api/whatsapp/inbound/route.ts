@@ -55,13 +55,44 @@ export async function POST(req: NextRequest) {
       // ── Journal entry ──────────────────────────────────────────────
       case "journal": {
         const d = parsed.data;
-        const journalText      = d.journalText      as string | null;
-        const gratitudeItems   = d.extractedGratitude as string | null;
-        const lessonsLearned   = d.extractedLessons   as string | null;
+        const newJournalText   = d.journalText        as string | null;
+        const newGratitude     = d.extractedGratitude as string | null;
+        const newLessons       = d.extractedLessons   as string | null;
         const moodScore        = d.moodScore    as number | null;
         const stressLevel      = d.stressLevel  as number | null;
         const energyLevel      = d.energyLevel  as number | null;
         const dayScore         = d.dayScore     as number | null;
+
+        // Fetch existing entry for today so we can APPEND not overwrite
+        const existing = await db.reflection.findFirst({
+          where: { userId, date: today, type: "daily" },
+        });
+
+        // Get IST time for the separator label
+        const istNow = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
+        const timeLabel = istNow.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+        // Append journal text with time separator
+        let journalText = newJournalText;
+        if (existing?.journalText && newJournalText) {
+          journalText = `${existing.journalText as string}\n\n[${timeLabel}] ${newJournalText}`;
+        }
+
+        // Append gratitude — add new items to existing
+        let gratitudeItems = newGratitude;
+        if (existing?.gratitudeItems && newGratitude) {
+          gratitudeItems = `${existing.gratitudeItems as string}\n${newGratitude}`;
+        } else if (existing?.gratitudeItems && !newGratitude) {
+          gratitudeItems = existing.gratitudeItems as string;
+        }
+
+        // Append lessons
+        let lessonsLearned = newLessons;
+        if (existing?.lessonsLearned && newLessons) {
+          lessonsLearned = `${existing.lessonsLearned as string}\n${newLessons}`;
+        } else if (existing?.lessonsLearned && !newLessons) {
+          lessonsLearned = existing.lessonsLearned as string;
+        }
 
         // Save to Reflection
         await db.reflection.upsert({
@@ -74,11 +105,10 @@ export async function POST(req: NextRequest) {
             weeklyScore: dayScore,
           },
           update: {
-            // Append to existing journal text if already has entry today
-            journalText: journalText ?? undefined,
-            ...(gratitudeItems  && { gratitudeItems }),
-            ...(lessonsLearned  && { lessonsLearned }),
-            ...(dayScore != null && { weeklyScore: dayScore }),
+            ...(journalText    != null && { journalText }),
+            ...(gratitudeItems != null && { gratitudeItems }),
+            ...(lessonsLearned != null && { lessonsLearned }),
+            ...(dayScore       != null && { weeklyScore: dayScore }),
           },
         });
 
@@ -106,11 +136,15 @@ export async function POST(req: NextRequest) {
 
       // ── Gratitude only ─────────────────────────────────────────────
       case "gratitude": {
-        const items = parsed.data.items as string;
+        const newItems = parsed.data.items as string;
+        const existingG = await db.reflection.findFirst({ where: { userId, date: today, type: "daily" } });
+        const gratitudeItems = existingG?.gratitudeItems
+          ? `${existingG.gratitudeItems as string}\n${newItems}`
+          : newItems;
         await db.reflection.upsert({
           where: { userId_date_type: { userId, date: today, type: "daily" } },
-          create: { userId, date: today, type: "daily", gratitudeItems: items, didJournal: true } as any,
-          update: { gratitudeItems: items },
+          create: { userId, date: today, type: "daily", gratitudeItems },
+          update: { gratitudeItems },
         });
         await db.dailyLog.upsert({
           where: { userId_date: { userId, date: today } },
@@ -123,11 +157,15 @@ export async function POST(req: NextRequest) {
 
       // ── Lessons learned ────────────────────────────────────────────
       case "lessons": {
-        const text = parsed.data.text as string;
+        const newText = parsed.data.text as string;
+        const existingL = await db.reflection.findFirst({ where: { userId, date: today, type: "daily" } });
+        const lessonsLearned = existingL?.lessonsLearned
+          ? `${existingL.lessonsLearned as string}\n${newText}`
+          : newText;
         await db.reflection.upsert({
           where: { userId_date_type: { userId, date: today, type: "daily" } },
-          create: { userId, date: today, type: "daily", lessonsLearned: text },
-          update: { lessonsLearned: text },
+          create: { userId, date: today, type: "daily", lessonsLearned },
+          update: { lessonsLearned },
         });
         await sendReply(from, parsed.reply);
         break;
