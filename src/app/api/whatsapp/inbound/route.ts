@@ -287,6 +287,11 @@ export async function POST(req: NextRequest) {
         const section  = (d.section  as string) || "work";
         const dueDate  = d.dueDate  ? new Date(d.dueDate as string) : null;
 
+        // Mark isToday if dueDate is today or no dueDate (WhatsApp tasks default to today)
+        const todayStr = today.toISOString().split("T")[0];
+        const dueDateStr = dueDate ? dueDate.toISOString().split("T")[0] : null;
+        const isToday = !dueDateStr || dueDateStr === todayStr;
+
         await db.task.create({
           data: {
             userId,
@@ -294,6 +299,7 @@ export async function POST(req: NextRequest) {
             priority,
             section,
             status: "todo",
+            isToday,
             ...(dueDate && { dueDate }),
           },
         });
