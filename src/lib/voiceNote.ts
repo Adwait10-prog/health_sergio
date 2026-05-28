@@ -43,7 +43,7 @@ export async function transcribeWhatsAppAudio(
   const transcription = await openai.audio.transcriptions.create({
     file,
     model: "whisper-1",
-    language: "en",
+    // No language lock — handles Hinglish (Hindi+English mix) better with auto-detect
   });
 
   return transcription.text.trim();
