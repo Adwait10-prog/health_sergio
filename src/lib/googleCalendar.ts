@@ -58,14 +58,18 @@ export async function createCalendarEvent(params: CalendarEventParams): Promise<
     return null;
   }
 
-  // Build IST datetime: date is midnight IST (stored as UTC-5.5h)
-  // Add 5.5h to get back to IST midnight, then add parsed hours/minutes
-  const istMidnightMs = date.getTime() + 5.5 * 60 * 60 * 1000;
-  const startMs = istMidnightMs + (parsed.hours * 60 + parsed.minutes) * 60 * 1000;
-  const endMs   = startMs + 60 * 60 * 1000; // 1hr duration default
+  // Build IST date string: date is stored as midnight IST (as UTC-5.5h)
+  // Add 5.5h to recover the IST date string, then build an IST datetime string
+  const istMidnight = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+  const dateStr = istMidnight.toISOString().split("T")[0]; // "YYYY-MM-DD" in IST
 
-  const startTime = new Date(startMs);
-  const endTime   = new Date(endMs);
+  // Build ISO string with IST offset (+05:30) — Google Calendar respects this
+  const hh = String(parsed.hours).padStart(2, "0");
+  const mm = String(parsed.minutes).padStart(2, "0");
+  const startIST = `${dateStr}T${hh}:${mm}:00+05:30`;
+  const endHours = parsed.hours + 1;
+  const hhEnd = String(endHours).padStart(2, "0");
+  const endIST = `${dateStr}T${hhEnd}:${mm}:00+05:30`;
 
   const auth = getOAuthClient();
   const calendar = google.calendar({ version: "v3", auth });
@@ -75,8 +79,8 @@ export async function createCalendarEvent(params: CalendarEventParams): Promise<
       calendarId: "primary",
       requestBody: {
         summary: title,
-        start: { dateTime: startTime.toISOString(), timeZone: "Asia/Kolkata" },
-        end:   { dateTime: endTime.toISOString(),   timeZone: "Asia/Kolkata" },
+        start: { dateTime: startIST, timeZone: "Asia/Kolkata" },
+        end:   { dateTime: endIST,   timeZone: "Asia/Kolkata" },
         reminders: {
           useDefault: false,
           overrides: [
