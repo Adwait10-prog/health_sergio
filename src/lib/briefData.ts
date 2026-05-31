@@ -172,6 +172,7 @@ export async function generateDelusionalBelief(context: {
   daysToRace?: number | null;
   completedTasks?: number | null;
   timeOfDay: "morning" | "evening";
+  isRestDay?: boolean;
 }): Promise<string> {
   const habitsText = context.habitsCompleted && context.habitsCompleted.length > 0
     ? context.habitsCompleted.join(", ")
@@ -195,6 +196,17 @@ Yesterday's data:
 - Days to Delhi HM race: ${context.daysToRace ?? "—"}
 
 Tone: Fierce, personal, grounded in the actual data. Sound like a coach who knows this athlete's exact numbers. Not cheesy. Not generic. Make it feel like destiny written in his own stats.`
+    : context.isRestDay
+    ? `Write a 3-4 line motivational message for Adwait's evening WhatsApp check-in. Today was a planned rest day. Celebrate the discipline of resting — the best athletes know recovery is part of training. Use the week's cumulative km to anchor it. WhatsApp format (no markdown). End with one line priming him for tomorrow.
+
+Today's data:
+- Today: planned rest day
+- Weekly running so far: ${context.weeklyKm ?? "—"}/${context.weeklyKmTarget ?? "—"} km
+- Habits done today: ${habitsText ?? "none logged"}
+- Tasks completed: ${context.completedTasks ?? 0}
+- Days to Delhi HM race: ${context.daysToRace ?? "—"}
+
+Tone: Rest days are power moves. Sound like a coach who knows that refusing to overtrain is its own form of discipline. Fierce but grounded. Not a consolation — a conviction.`
     : `Write a 3-4 line motivational message for Adwait's evening WhatsApp check-in. Celebrate what he actually did today with "chosen one" energy — like he's making history with each day he shows up. WhatsApp format (no markdown). End with one line about tomorrow.
 
 Today's data:
@@ -462,10 +474,11 @@ export async function shouldSendNudge(): Promise<{ send: boolean; message: strin
       take: 3,
       select: { title: true },
     }),
+    // Today's activity first, fallback to last 3 days if rest day
     db.stravaActivity.findFirst({
-      where: { userId, date: { gte: today, lt: tomorrow }, type: { not: "Walk" } },
+      where: { userId, date: { gte: subDays(today, 3), lt: tomorrow }, type: { not: "Walk" } },
       orderBy: { date: "desc" },
-      select: { name: true, type: true, distanceM: true, movingTimeSec: true },
+      select: { name: true, type: true, date: true, distanceM: true, movingTimeSec: true },
     }),
     db.task.count({
       where: { userId, status: "done", updatedAt: { gte: today, lt: tomorrow } },
@@ -477,25 +490,38 @@ export async function shouldSendNudge(): Promise<{ send: boolean; message: strin
   const hasJournaled = todayReflection?.journalText || todayLog?.didJournal;
   const pendingTasks = openTasks.map(t => `• ${t.title}`).join("\n");
 
+  // Check if the Strava activity is from today or a recent past day (rest day fallback)
+  const stravaDate = todayStrava?.date ? format(new Date(todayStrava.date), "yyyy-MM-dd") : null;
+  const todayStr = format(today, "yyyy-MM-dd");
+  const isRestDay = !stravaDate || stravaDate !== todayStr;
+
   // Build habits done today
   const habitsCompleted: string[] = [];
-  if (todayLog?.didWorkout || todayStrava) habitsCompleted.push("workout");
+  if (todayLog?.didWorkout || (todayStrava && !isRestDay)) habitsCompleted.push("workout");
   if (todayLog?.didCode) habitsCompleted.push("code");
   if (todayLog?.didRead) habitsCompleted.push("read");
   if (todayLog?.didMeditate) habitsCompleted.push("meditate");
   if (todayLog?.didJournal || todayReflection?.journalText) habitsCompleted.push("journal");
 
-  // Generate delusional belief message for evening
+  // On rest days, use the week's accumulated km as the anchor for the belief message
+  // (most recent activity still passed for reference, but framed differently)
   const beliefText = await generateDelusionalBelief({
-    activityName: todayStrava?.name,
-    activityKm: todayStrava?.distanceM ? Math.round(todayStrava.distanceM / 100) / 10 : null,
-    activityMin: todayStrava?.movingTimeSec ? Math.round(todayStrava.movingTimeSec / 60) : null,
+    activityName: isRestDay
+      ? null  // null signals rest day — prompt will use week cumulative instead
+      : todayStrava?.name,
+    activityKm: isRestDay
+      ? null
+      : (todayStrava?.distanceM ? Math.round(todayStrava.distanceM / 100) / 10 : null),
+    activityMin: isRestDay
+      ? null
+      : (todayStrava?.movingTimeSec ? Math.round(todayStrava.movingTimeSec / 60) : null),
     habitsCompleted,
     weeklyKm: weekStats.doneKm,
     weeklyKmTarget: weekStats.targetKm,
     daysToRace,
     completedTasks: completedTasksCount,
     timeOfDay: "evening",
+    isRestDay,
   });
 
   if (!hasJournaled) {
