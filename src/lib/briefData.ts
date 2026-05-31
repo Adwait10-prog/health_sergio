@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
 import { getTodayHMSession, getRaceCountdown, getCurrentWeekHMStats } from "@/lib/hmTracker";
-import { subDays, format, getDay } from "date-fns";
+import { subDays, format, getDay, addDays } from "date-fns";
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
@@ -158,6 +158,63 @@ export async function fetchBriefData() {
   };
 }
 
+// Generate a personalized "delusional belief" motivational message
+// timeOfDay: "morning" uses yesterday's data; "evening" uses today's data
+export async function generateDelusionalBelief(context: {
+  activityName?: string | null;
+  activityKm?: number | null;
+  activityMin?: number | null;
+  habitsCompleted?: string[];
+  journalSnippet?: string | null;
+  moodScore?: number | null;
+  weeklyKm?: number | null;
+  weeklyKmTarget?: number | null;
+  daysToRace?: number | null;
+  completedTasks?: number | null;
+  timeOfDay: "morning" | "evening";
+}): Promise<string> {
+  const habitsText = context.habitsCompleted && context.habitsCompleted.length > 0
+    ? context.habitsCompleted.join(", ")
+    : null;
+
+  const activityText = context.activityKm
+    ? `${context.activityName ?? "Run"} — ${context.activityKm}km${context.activityMin ? ` in ${context.activityMin}min` : ""}`
+    : context.activityName
+    ? context.activityName
+    : null;
+
+  const prompt = context.timeOfDay === "morning"
+    ? `Write a 3-4 line motivational message for Adwait's morning WhatsApp brief. It should sound like he is the absolute chosen one — delusion-level belief, not generic hype. Reference real numbers from yesterday. WhatsApp format (no markdown). End with one sharp line about what today requires.
+
+Yesterday's data:
+- Activity: ${activityText ?? "rest day"}
+- Weekly running: ${context.weeklyKm ?? "—"}/${context.weeklyKmTarget ?? "—"} km done
+- Habits done: ${habitsText ?? "none logged"}
+- Mood: ${context.moodScore ? `${context.moodScore}/10` : "not logged"}
+- Journal: ${context.journalSnippet ? `"${context.journalSnippet}"` : "nothing logged"}
+- Days to Delhi HM race: ${context.daysToRace ?? "—"}
+
+Tone: Fierce, personal, grounded in the actual data. Sound like a coach who knows this athlete's exact numbers. Not cheesy. Not generic. Make it feel like destiny written in his own stats.`
+    : `Write a 3-4 line motivational message for Adwait's evening WhatsApp check-in. Celebrate what he actually did today with "chosen one" energy — like he's making history with each day he shows up. WhatsApp format (no markdown). End with one line about tomorrow.
+
+Today's data:
+- Activity: ${activityText ?? "no activity logged"}
+- Weekly running: ${context.weeklyKm ?? "—"}/${context.weeklyKmTarget ?? "—"} km done
+- Habits done today: ${habitsText ?? "none logged"}
+- Tasks completed: ${context.completedTasks ?? 0}
+- Days to Delhi HM race: ${context.daysToRace ?? "—"}
+
+Tone: Fierce, personal, grounded in what he actually did today. Sound like a coach who refuses to let this athlete see himself as ordinary. Make it feel like every rep, every km, every habit logged is building something undeniable.`;
+
+  const response = await anthropic.messages.create({
+    model: "claude-haiku-4-5",
+    max_tokens: 200,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  return (response.content[0] as { text: string }).text.trim();
+}
+
 // Generate morning brief using tight data blob
 export async function generateMorningBrief(data: Awaited<ReturnType<typeof fetchBriefData>>): Promise<string> {
   const prompt = `Write Adwait's morning WhatsApp brief. Warm, personal, coach-like. Max 10 lines. No markdown. Use emojis sparingly.
@@ -179,13 +236,33 @@ Rules:
 4. One line on top open task if any
 5. End with one sharp focus question or challenge for the day`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 400,
-    messages: [{ role: "user", content: prompt }],
-  });
+  // Run brief + delusional belief in parallel
+  const [briefText, beliefText] = await Promise.all([
+    anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 400,
+      messages: [{ role: "user", content: prompt }],
+    }).then(r => (r.content[0] as { text: string }).text.trim()),
 
-  return (response.content[0] as { text: string }).text.trim();
+    generateDelusionalBelief({
+      activityName: data.recentActivity?.name,
+      activityKm: data.recentActivity?.km,
+      habitsCompleted: [
+        ...(data.habitCounts.workout > 0 ? ["workout"] : []),
+        ...(data.habitCounts.journal > 0 ? ["journal"] : []),
+        ...(data.habitCounts.code > 0 ? ["code"] : []),
+        ...(data.habitCounts.read > 0 ? ["read"] : []),
+        ...(data.habitCounts.meditate > 0 ? ["meditate"] : []),
+      ],
+      journalSnippet: data.yesterdayJournal ? data.yesterdayJournal.slice(0, 100) : null,
+      weeklyKm: data.weeklyKm,
+      weeklyKmTarget: data.weeklyKmTarget,
+      daysToRace: data.daysToRace,
+      timeOfDay: "morning",
+    }),
+  ]);
+
+  return `${briefText}\n\n🔥 ${beliefText}`;
 }
 
 // Returns true if today is Sunday (IST)
@@ -337,24 +414,43 @@ Rules:
 6. 1 line on running progress vs target
 7. End with one forward-looking challenge for next week`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5",
-    max_tokens: 600,
-    messages: [{ role: "user", content: prompt }],
-  });
+  // Run brief + delusional belief in parallel
+  const [briefText, beliefText] = await Promise.all([
+    anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 600,
+      messages: [{ role: "user", content: prompt }],
+    }).then(r => (r.content[0] as { text: string }).text.trim()),
 
-  return (response.content[0] as { text: string }).text.trim();
+    generateDelusionalBelief({
+      weeklyKm: data.weeklyKm,
+      weeklyKmTarget: data.weeklyKmTarget,
+      habitsCompleted: [
+        ...(data.habitCounts.workout > 0 ? [`workout ${data.habitCounts.workout}/7`] : []),
+        ...(data.habitCounts.journal > 0 ? [`journal ${data.habitCounts.journal}/7`] : []),
+        ...(data.habitCounts.code > 0 ? [`code ${data.habitCounts.code}/7`] : []),
+        ...(data.habitCounts.read > 0 ? [`read ${data.habitCounts.read}/7`] : []),
+        ...(data.habitCounts.meditate > 0 ? [`meditate ${data.habitCounts.meditate}/7`] : []),
+      ],
+      journalSnippet: data.journalSnippets[0]?.text ?? null,
+      daysToRace: data.daysToRace,
+      timeOfDay: "morning",
+    }),
+  ]);
+
+  return `${briefText}\n\n🔥 ${beliefText}`;
 }
 
-// Generate evening nudge — check if journaled today
+// Generate evening nudge — always sends with a motivational belief message + journal prompt
 export async function shouldSendNudge(): Promise<{ send: boolean; message: string }> {
   const userId = getUserId();
   const today = todayIST();
+  const tomorrow = addDays(today, 1);
 
-  const [todayLog, todayReflection, openTasks] = await Promise.all([
+  const [todayLog, todayReflection, openTasks, todayStrava, completedTasksCount, daysToRace, weekStats] = await Promise.all([
     db.dailyLog.findFirst({
       where: { userId, date: today },
-      select: { didJournal: true, moodScore: true, didWorkout: true },
+      select: { didJournal: true, moodScore: true, didWorkout: true, didCode: true, didRead: true, didMeditate: true, didNetwork: true, didLearn: true },
     }),
     db.reflection.findFirst({
       where: { userId, date: today, type: "daily" },
@@ -366,25 +462,65 @@ export async function shouldSendNudge(): Promise<{ send: boolean; message: strin
       take: 3,
       select: { title: true },
     }),
+    db.stravaActivity.findFirst({
+      where: { userId, date: { gte: today, lt: tomorrow }, type: { not: "Walk" } },
+      orderBy: { date: "desc" },
+      select: { name: true, type: true, distanceM: true, movingTimeSec: true },
+    }),
+    db.task.count({
+      where: { userId, status: "done", updatedAt: { gte: today, lt: tomorrow } },
+    }),
+    getRaceCountdown(),
+    getCurrentWeekHMStats(),
   ]);
 
   const hasJournaled = todayReflection?.journalText || todayLog?.didJournal;
-  const habitsNotDone = [];
-  if (!todayLog?.didWorkout) habitsNotDone.push("workout");
-
-  // Build nudge
   const pendingTasks = openTasks.map(t => `• ${t.title}`).join("\n");
 
+  // Build habits done today
+  const habitsCompleted: string[] = [];
+  if (todayLog?.didWorkout || todayStrava) habitsCompleted.push("workout");
+  if (todayLog?.didCode) habitsCompleted.push("code");
+  if (todayLog?.didRead) habitsCompleted.push("read");
+  if (todayLog?.didMeditate) habitsCompleted.push("meditate");
+  if (todayLog?.didJournal || todayReflection?.journalText) habitsCompleted.push("journal");
+
+  // Generate delusional belief message for evening
+  const beliefText = await generateDelusionalBelief({
+    activityName: todayStrava?.name,
+    activityKm: todayStrava?.distanceM ? Math.round(todayStrava.distanceM / 100) / 10 : null,
+    activityMin: todayStrava?.movingTimeSec ? Math.round(todayStrava.movingTimeSec / 60) : null,
+    habitsCompleted,
+    weeklyKm: weekStats.doneKm,
+    weeklyKmTarget: weekStats.targetKm,
+    daysToRace,
+    completedTasks: completedTasksCount,
+    timeOfDay: "evening",
+  });
+
   if (!hasJournaled) {
-    const message = `Hey Adwait 👋 End of day check-in!\n\nYou haven't journaled today — how did it go? Just reply here.\n\n${pendingTasks.length > 0 ? `Open tasks:\n${pendingTasks}` : ""}`.trim();
-    return { send: true, message };
+    const parts = [
+      `🔥 ${beliefText}`,
+      ``,
+      `Hey Adwait 👋 End of day check-in!`,
+      ``,
+      `You haven't journaled today — how did it go? Just reply here.`,
+    ];
+    if (pendingTasks.length > 0) {
+      parts.push(``, `Still open:`, pendingTasks);
+    }
+    return { send: true, message: parts.join("\n") };
   }
 
-  // Already journaled — send lighter nudge with open tasks
+  // Already journaled — send belief + open tasks
+  const parts = [
+    `🔥 ${beliefText}`,
+    ``,
+    `Evening check-in ✨`,
+  ];
   if (openTasks.length > 0) {
-    const message = `Evening check-in ✨\n\nStill open:\n${pendingTasks}\n\nAnything to add to today's journal?`;
-    return { send: true, message };
+    parts.push(``, `Still open:`, pendingTasks);
   }
-
-  return { send: false, message: "" };
+  parts.push(``, `Anything to add to today's journal?`);
+  return { send: true, message: parts.join("\n") };
 }
