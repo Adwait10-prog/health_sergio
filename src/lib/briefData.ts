@@ -26,12 +26,19 @@ export async function fetchBriefData() {
   const last3Start = subDays(today, 3);
   const weekStart = subDays(today, 7);
 
+  // Detect Monday in IST (getDay: 1 = Monday)
+  const isMonday = getDay(istNow()) === 1;
+  // Previous week window: Mon–Sun before this week (8–14 days ago)
+  const prevWeekEnd = subDays(today, 1);    // yesterday = last Sunday
+  const prevWeekStart = subDays(today, 8);  // 8 days ago = last Monday
+
   const [
     last3Logs,
     yesterdayReflection,
     openTasks,
     last7Strava,
     last7Reflections,
+    prevWeekStrava,
   ] = await Promise.all([
     // Last 3 days vitals — enough for trend, not too much
     db.dailyLog.findMany({
@@ -83,6 +90,14 @@ export async function fetchBriefData() {
       where: { userId, type: "daily", date: { gte: weekStart } },
       select: { date: true },
     }),
+
+    // Previous week's runs — only fetched on Monday, null otherwise
+    isMonday
+      ? db.stravaActivity.findMany({
+          where: { userId, date: { gte: prevWeekStart, lte: prevWeekEnd }, type: { in: ["Run", "TrailRun"] } },
+          select: { distanceM: true },
+        })
+      : Promise.resolve(null),
   ]);
 
   // Aggregate — don't pass raw rows to Claude
@@ -100,6 +115,11 @@ export async function fetchBriefData() {
   const weeklyKm = last7Strava
     .filter(a => a.type === "Run" || a.type === "TrailRun")
     .reduce((sum, a) => sum + (a.distanceM ?? 0) / 1000, 0);
+
+  // Previous week total km — used on Monday so belief message isn't anchored to 0
+  const lastWeekKm = prevWeekStrava
+    ? Math.round(prevWeekStrava.reduce((sum, a) => sum + (a.distanceM ?? 0) / 1000, 0) * 10) / 10
+    : null;
 
   const journalStreak = last7Reflections.length;
 
@@ -121,6 +141,7 @@ export async function fetchBriefData() {
 
   return {
     today: format(istNow(), "EEEE, d MMMM"),
+    isMonday,
     daysToRace,
     weekNum: weekStats.weekNum,
     todaySession: todaySession ? {
@@ -148,6 +169,7 @@ export async function fetchBriefData() {
       : null,
     weeklyKm: Math.round(weeklyKm * 10) / 10,
     weeklyKmTarget: weekStats.targetKm,
+    lastWeekKm,  // non-null only on Mondays
     habitCounts,
     openTasks: openTasks.slice(0, 5).map(t => t.title),
     recentActivity: last7Strava[0] ? {
@@ -169,6 +191,7 @@ export async function generateDelusionalBelief(context: {
   moodScore?: number | null;
   weeklyKm?: number | null;
   weeklyKmTarget?: number | null;
+  lastWeekKm?: number | null;  // populated on Mondays only
   daysToRace?: number | null;
   completedTasks?: number | null;
   timeOfDay: "morning" | "evening";
@@ -184,8 +207,22 @@ export async function generateDelusionalBelief(context: {
     ? context.activityName
     : null;
 
+  const isMondayContext = context.lastWeekKm != null;
+
   const prompt = context.timeOfDay === "morning"
-    ? `Write a 3-4 line motivational message for Adwait's morning WhatsApp brief. It should sound like he is the absolute chosen one — delusion-level belief, not generic hype. Reference real numbers from yesterday. WhatsApp format (no markdown). End with one sharp line about what today requires.
+    ? isMondayContext
+      ? `Write a 3-4 line motivational message for Adwait's Monday morning WhatsApp brief. New week, fresh slate — but anchor it in what he proved last week. "Chosen one" energy, not generic hype. Reference real numbers. WhatsApp format (no markdown). End with one sharp line about what this week demands.
+
+Last week's data:
+- Running total last week: ${context.lastWeekKm}km
+- Activity yesterday: ${activityText ?? "rest day (planned)"}
+- Habits done: ${habitsText ?? "none logged"}
+- Journal: ${context.journalSnippet ? `"${context.journalSnippet}"` : "nothing logged"}
+- Days to Delhi HM race: ${context.daysToRace ?? "—"}
+- New week target: ${context.weeklyKmTarget ?? "—"} km
+
+Tone: Fierce. Last week's ${context.lastWeekKm}km is the floor, not the ceiling. Sound like a coach reminding him that Monday is when ordinary people reset and exceptional people build on what they've already done.`
+      : `Write a 3-4 line motivational message for Adwait's morning WhatsApp brief. It should sound like he is the absolute chosen one — delusion-level belief, not generic hype. Reference real numbers from yesterday. WhatsApp format (no markdown). End with one sharp line about what today requires.
 
 Yesterday's data:
 - Activity: ${activityText ?? "rest day"}
@@ -269,6 +306,7 @@ Rules:
       journalSnippet: data.yesterdayJournal ? data.yesterdayJournal.slice(0, 100) : null,
       weeklyKm: data.weeklyKm,
       weeklyKmTarget: data.weeklyKmTarget,
+      lastWeekKm: data.lastWeekKm,
       daysToRace: data.daysToRace,
       timeOfDay: "morning",
     }),
