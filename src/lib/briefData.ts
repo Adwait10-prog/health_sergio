@@ -180,6 +180,16 @@ export async function fetchBriefData() {
   };
 }
 
+// Fixed persona context — who Adwait actually is, used to make belief messages personal
+const ADWAIT_PERSONA = `Who he is:
+- Adwait Natekar, 25, based in India
+- Works a day job, but building toward launching his own startup — this OS he's building is part of that journey
+- Came back from an ITB injury — every km he runs now is a comeback km
+- Runs, lifts, codes, reads, journals — doing all of it at once, not sequentially
+- Last HM was 2:24. Next race: Vedanta Delhi HM (18 Oct 2026), target sub-2:05. That's 19 minutes off.
+- The arc doesn't stop there: after Delhi HM, the goal is a full marathon, then eventually an Ironman
+- The belief: he's 25, working a job, training for a sub-2:05 HM, and building a startup on the side. Most people at 25 pick one thing. He's compressing a decade into a year.`;
+
 // Generate a personalized "delusional belief" motivational message
 // timeOfDay: "morning" uses yesterday's data; "evening" uses today's data
 export async function generateDelusionalBelief(context: {
@@ -211,7 +221,9 @@ export async function generateDelusionalBelief(context: {
 
   const prompt = context.timeOfDay === "morning"
     ? isMondayContext
-      ? `Write a 3-4 line motivational message for Adwait's Monday morning WhatsApp brief. New week, fresh slate — but anchor it in what he proved last week. "Chosen one" energy, not generic hype. Reference real numbers. WhatsApp format (no markdown). End with one sharp line about what this week demands.
+      ? `${ADWAIT_PERSONA}
+
+Write a 3-4 line motivational message for Adwait's Monday morning WhatsApp brief. New week, fresh slate — but anchor it in what he proved last week. "Chosen one" energy, not generic hype. Reference real numbers. WhatsApp format (no markdown). End with one sharp line about what this week demands.
 
 Last week's data:
 - Running total last week: ${context.lastWeekKm}km
@@ -221,8 +233,10 @@ Last week's data:
 - Days to Delhi HM race: ${context.daysToRace ?? "—"}
 - New week target: ${context.weeklyKmTarget ?? "—"} km
 
-Tone: Fierce. Last week's ${context.lastWeekKm}km is the floor, not the ceiling. Sound like a coach reminding him that Monday is when ordinary people reset and exceptional people build on what they've already done.`
-      : `Write a 3-4 line motivational message for Adwait's morning WhatsApp brief. It should sound like he is the absolute chosen one — delusion-level belief, not generic hype. Reference real numbers from yesterday. WhatsApp format (no markdown). End with one sharp line about what today requires.
+Tone: Fierce. Last week's ${context.lastWeekKm}km is the floor, not the ceiling. He's a founder training for a sub-2:05 HM coming back from ITB — Monday is when ordinary people reset and people like him build on what they've already done.`
+      : `${ADWAIT_PERSONA}
+
+Write a 3-4 line motivational message for Adwait's morning WhatsApp brief. It should sound like he is the absolute chosen one — delusion-level belief, not generic hype. Reference real numbers from yesterday. WhatsApp format (no markdown). End with one sharp line about what today requires.
 
 Yesterday's data:
 - Activity: ${activityText ?? "rest day"}
@@ -232,9 +246,11 @@ Yesterday's data:
 - Journal: ${context.journalSnippet ? `"${context.journalSnippet}"` : "nothing logged"}
 - Days to Delhi HM race: ${context.daysToRace ?? "—"}
 
-Tone: Fierce, personal, grounded in the actual data. Sound like a coach who knows this athlete's exact numbers. Not cheesy. Not generic. Make it feel like destiny written in his own stats.`
+Tone: Fierce, personal, grounded in the actual data. He's a founder-athlete coming back from ITB, chasing sub-2:05, building a company at the same time. Sound like a coach who knows exactly who this person is and refuses to let him see himself as ordinary.`
     : context.isRestDay
-    ? `Write a 3-4 line motivational message for Adwait's evening WhatsApp check-in. Today was a planned rest day. Celebrate the discipline of resting — the best athletes know recovery is part of training. Use the week's cumulative km to anchor it. WhatsApp format (no markdown). End with one line priming him for tomorrow.
+    ? `${ADWAIT_PERSONA}
+
+Write a 3-4 line motivational message for Adwait's evening WhatsApp check-in. Today was a planned rest day. Celebrate the discipline of resting — the best athletes know recovery is part of training. Use the week's cumulative km to anchor it. WhatsApp format (no markdown). End with one line priming him for tomorrow.
 
 Today's data:
 - Today: planned rest day
@@ -243,8 +259,10 @@ Today's data:
 - Tasks completed: ${context.completedTasks ?? 0}
 - Days to Delhi HM race: ${context.daysToRace ?? "—"}
 
-Tone: Rest days are power moves. Sound like a coach who knows that refusing to overtrain is its own form of discipline. Fierce but grounded. Not a consolation — a conviction.`
-    : `Write a 3-4 line motivational message for Adwait's evening WhatsApp check-in. Celebrate what he actually did today with "chosen one" energy — like he's making history with each day he shows up. WhatsApp format (no markdown). End with one line about tomorrow.
+Tone: Rest days are power moves. A founder-athlete coming back from ITB who refuses to overtrain is playing the long game. Fierce but grounded — not a consolation, a conviction.`
+    : `${ADWAIT_PERSONA}
+
+Write a 3-4 line motivational message for Adwait's evening WhatsApp check-in. Celebrate what he actually did today with "chosen one" energy — like he's making history with each day he shows up. WhatsApp format (no markdown). End with one line about tomorrow.
 
 Today's data:
 - Activity: ${activityText ?? "no activity logged"}
@@ -253,7 +271,7 @@ Today's data:
 - Tasks completed: ${context.completedTasks ?? 0}
 - Days to Delhi HM race: ${context.daysToRace ?? "—"}
 
-Tone: Fierce, personal, grounded in what he actually did today. Sound like a coach who refuses to let this athlete see himself as ordinary. Make it feel like every rep, every km, every habit logged is building something undeniable.`;
+Tone: Fierce, personal, grounded in what he actually did today. He's building a startup and training for a sub-2:05 HM after an ITB comeback — every km, every habit, every task is proof of what he already is. Make it undeniable.`;
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5",
