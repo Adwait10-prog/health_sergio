@@ -7,7 +7,7 @@ import { queryMemory } from "@/lib/memoryQuery";
 import { createCalendarEvent } from "@/lib/googleCalendar";
 import Anthropic from "@anthropic-ai/sdk";
 import twilio from "twilio";
-import { subDays } from "date-fns";
+import { subDays, addDays, getDay } from "date-fns";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
@@ -36,6 +36,25 @@ function todayIST(): Date {
   const dateStr = new Date(istMs).toISOString().split("T")[0];
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d) - 5.5 * 60 * 60 * 1000);
+}
+
+// Resolve a day string like "today", "tomorrow", "monday" to a DB-compatible IST midnight UTC date
+function resolveDay(dayStr: string, today: Date): Date | null {
+  const s = dayStr.toLowerCase().trim();
+  if (s === "today")    return today;
+  if (s === "tomorrow") return addDays(today, 1);
+  if (s === "yesterday") return subDays(today, 1);
+
+  // Named weekday — find the next occurrence (or today if it matches)
+  const weekdays = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+  const targetIdx = weekdays.indexOf(s);
+  if (targetIdx === -1) return null;
+
+  const todayIdx = getDay(today); // 0=Sun, 1=Mon...
+  let diff = targetIdx - todayIdx;
+  if (diff < 0) diff += 7;        // past day this week → go forward to next occurrence
+  // diff === 0 means today matches the weekday name — treat as today
+  return addDays(today, diff);
 }
 
 export async function POST(req: NextRequest) {
@@ -632,6 +651,106 @@ ${context}`,
         });
 
         await sendReply(from, answer);
+        break;
+      }
+
+      // ── Reschedule session (swap two days) ────────────────────────
+      case "reschedule_session": {
+        const fromDayStr = (parsed.data.fromDay as string ?? "today").toLowerCase();
+        const toDayStr   = (parsed.data.toDay   as string ?? "today").toLowerCase();
+
+        const fromDate = resolveDay(fromDayStr, today);
+        const toDate   = resolveDay(toDayStr,   today);
+
+        if (!fromDate || !toDate) {
+          await sendReply(from, "Couldn't figure out which days to swap. Try saying something like 'swap today and tomorrow' or 'do tomorrow's run today'.");
+          break;
+        }
+
+        const [fromSession, toSession] = await Promise.all([
+          db.hMSession.findFirst({ where: { userId, date: fromDate } }),
+          db.hMSession.findFirst({ where: { userId, date: toDate   } }),
+        ]);
+
+        if (!fromSession) {
+          await sendReply(from, `No training session found for ${fromDayStr}. Nothing to swap.`);
+          break;
+        }
+        if (!toSession) {
+          await sendReply(from, `No training session found for ${toDayStr}. Nothing to swap.`);
+          break;
+        }
+
+        // Swap the workout content between the two dates (dates stay fixed in DB)
+        const fromFields = {
+          type:       fromSession.type,
+          name:       fromSession.name,
+          targetKm:   fromSession.targetKm,
+          targetMin:  fromSession.targetMin,
+          notes:      fromSession.notes,
+          isCutback:  fromSession.isCutback,
+        };
+        const toFields = {
+          type:       toSession.type,
+          name:       toSession.name,
+          targetKm:   toSession.targetKm,
+          targetMin:  toSession.targetMin,
+          notes:      toSession.notes,
+          isCutback:  toSession.isCutback,
+        };
+
+        await Promise.all([
+          db.hMSession.update({
+            where: { id: fromSession.id },
+            data: { ...toFields, isModified: true },
+          }),
+          db.hMSession.update({
+            where: { id: toSession.id },
+            data: { ...fromFields, isModified: true },
+          }),
+        ]);
+
+        const fromLabel = fromDayStr === "today" ? "Today" : fromDayStr.charAt(0).toUpperCase() + fromDayStr.slice(1);
+        const toLabel   = toDayStr   === "today" ? "today" : toDayStr;
+        await sendReply(from, `✅ Swapped! ${fromLabel}'s session is now "${toFields.name}" and ${toLabel}'s is "${fromFields.name}". Both marked as modified in your plan.`);
+        break;
+      }
+
+      // ── Skip session ───────────────────────────────────────────────
+      case "skip_session": {
+        const dayStr = (parsed.data.day as string ?? "today").toLowerCase();
+        const reason = parsed.data.reason as string | null;
+
+        const targetDate = resolveDay(dayStr, today);
+        if (!targetDate) {
+          await sendReply(from, "Couldn't figure out which day to skip. Try 'skip today' or 'skip tomorrow's run'.");
+          break;
+        }
+
+        const session = await db.hMSession.findFirst({ where: { userId, date: targetDate } });
+        if (!session) {
+          await sendReply(from, `No training session found for ${dayStr}.`);
+          break;
+        }
+
+        // Upsert a SessionLog with status=skipped
+        await db.hMSessionLog.upsert({
+          where: { sessionId: session.id },
+          create: {
+            sessionId: session.id,
+            userId,
+            status: "skipped",
+            notes: reason ?? null,
+          },
+          update: {
+            status: "skipped",
+            ...(reason && { notes: reason }),
+          },
+        });
+
+        const label = dayStr === "today" ? "Today's" : `${dayStr.charAt(0).toUpperCase() + dayStr.slice(1)}'s`;
+        const reasonNote = reason ? ` (${reason})` : "";
+        await sendReply(from, `Got it — ${label} "${session.name}" marked as skipped${reasonNote}. Rest up 💤`);
         break;
       }
 

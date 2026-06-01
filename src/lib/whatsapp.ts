@@ -15,8 +15,10 @@ export interface ParsedMessage {
     | "add_task"       // "remind me to X" / "add task: Y"
     | "query_tasks"    // "what are my tasks?" / "what's pending?"
     | "complete_task"  // "done with X" / "mark X as done"
-    | "query_memory"   // "what did I discuss with X?" / "what happened last week with Y?"
-    | "query_run"      // "how was my run today?" / "analyse my run"
+    | "query_memory"        // "what did I discuss with X?" / "what happened last week with Y?"
+    | "query_run"           // "how was my run today?" / "analyse my run"
+    | "reschedule_session"  // "swap today's run with tomorrow" / "do tomorrow's workout today"
+    | "skip_session"        // "skip today's run" / "rest today instead"
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -30,7 +32,7 @@ Your job: figure out WHAT he's saying and extract the right fields.
 
 Respond ONLY with valid JSON:
 {
-  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "unknown",
+  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "reschedule_session" | "skip_session" | "unknown",
   "data": {
     // For journal:
     //   journalText: the full journal entry as-is (preserve his words exactly)
@@ -76,6 +78,17 @@ Respond ONLY with valid JSON:
     //   keywords: array of 1-3 search keywords extracted from the question (names, topics, companies)
     //   dateHint: "recent" | "this_week" | "last_week" | "this_month" | null
     //   scope: "meetings" | "journal" | "tasks" | "all" — what to search
+    //
+    // For reschedule_session:
+    //   fromDay: "today" | "tomorrow" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+    //   toDay: "today" | "tomorrow" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"
+    //   NOTE: "swap today and tomorrow" → fromDay: "today", toDay: "tomorrow"
+    //         "do tomorrow's run today" → fromDay: "tomorrow", toDay: "today"
+    //         "move Wednesday's run to today" → fromDay: "wednesday", toDay: "today"
+    //
+    // For skip_session:
+    //   day: "today" | "tomorrow" | "monday" etc — which day's session to skip (default "today")
+    //   reason: short reason string if mentioned, else null
   },
   "reply": "warm, personal 1-2 line reply. Acknowledge what he shared. Use his name occasionally. Be like a thoughtful friend, not a bot. Use emojis sparingly."
 }
@@ -138,8 +151,21 @@ Examples:
 - "any pending follow ups?" / "what tasks did I complete this week?"
   → intent: query_memory, keywords: ["follow up"] / ["completed"], dateHint: null, scope: "tasks"
 
+- "swap today's run with tomorrow's" / "do tomorrow's workout today, I'm travelling tomorrow"
+  → intent: reschedule_session, fromDay: "tomorrow", toDay: "today"
+
+- "move Wednesday's session to Thursday" / "shift Friday's long run to Saturday"
+  → intent: reschedule_session, fromDay: "wednesday", toDay: "thursday" / fromDay: "friday", toDay: "saturday"
+
+- "skip today's run" / "rest today, I'm tired" / "not running today"
+  → intent: skip_session, day: "today", reason: null / "tired"
+
+- "skip tomorrow's gym session, I'm travelling"
+  → intent: skip_session, day: "tomorrow", reason: "travelling"
+
 IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.
-IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.`;
+IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.
+IMPORTANT: reschedule_session means he wants to SWAP or MOVE a session to a different day. skip_session means he wants to mark a session as skipped/rest.`;
 
 export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage> {
   try {
@@ -151,8 +177,10 @@ export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage>
     });
 
     const raw = (response.content[0] as { text: string }).text.trim();
+    console.log("WhatsApp raw response:", raw.slice(0, 300));
     const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) ?? [null, raw];
     const parsed = JSON.parse(jsonMatch[1] ?? raw) as ParsedMessage;
+    console.log("WhatsApp parsed intent:", parsed.intent);
     return parsed;
   } catch (e) {
     console.error("WhatsApp parse error:", e);
