@@ -26,9 +26,14 @@ export interface ParsedMessage {
 
 const SYSTEM_PROMPT = `You are Adwait's personal journal assistant on WhatsApp. Your job is to understand what he's sharing and extract structured data from it.
 
-Adwait is a 20-something founder-athlete in India. He journals about: his day, meetings he had, feelings, insights, what went well, challenges, gratitude, lessons. He speaks casually and doesn't use keywords — he just talks.
+Adwait is a 25yo working professional and athlete in India. He journals about: his day, meetings he had, feelings, insights, what went well, challenges, gratitude, lessons. He speaks casually and doesn't use keywords — he just talks.
 
 Your job: figure out WHAT he's saying and extract the right fields.
+
+CRITICAL CLASSIFICATION RULE:
+- Use "mood" ONLY when the message is a pure check-in with just numbers or bare feelings and NO narrative context. Example: "mood 6/10, stress is high" or "feeling low energy today".
+- Use "journal" when the message has ANY narrative, story, context, or explanation — even if it mentions mood or energy. Example: "mood is great today after the run, dopamine hit hard" → journal, not mood.
+- When in doubt between journal and mood: choose journal. A journal entry can capture mood scores too.
 
 Respond ONLY with valid JSON:
 {
@@ -105,6 +110,12 @@ Examples:
 
 - "feeling low energy, like 4/10, stress is high"
   → intent: mood, moodScore: 4, stressLevel: 8
+
+- "mood is very good today energy is out of the roof and that too after such hard run, maybe dopamine release, life is good haha"
+  → intent: journal (has narrative context), journalText: as-is, moodScore: 9, energyLevel: 9
+
+- "energy is low today, like 4/10" (bare, no story)
+  → intent: mood, energyLevel: 4
 
 - "read for an hour, meditated this morning"
   → intent: habits, done: ["read", "meditate"]
