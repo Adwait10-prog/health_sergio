@@ -154,6 +154,15 @@ Examples:
 - "swap today's run with tomorrow's" / "do tomorrow's workout today, I'm travelling tomorrow"
   → intent: reschedule_session, fromDay: "tomorrow", toDay: "today"
 
+- "I'll do my interval run today instead of tomorrow" / "doing tomorrow's run today since I'm travelling"
+  → intent: reschedule_session, fromDay: "tomorrow", toDay: "today"
+
+- "I'm doing the 7.5km intervals today as I'm travelling to Mumbai tomorrow"
+  → intent: reschedule_session, fromDay: "tomorrow", toDay: "today"
+
+- "pulling tomorrow's session to today" / "bringing forward Wednesday's run to Tuesday"
+  → intent: reschedule_session, fromDay: "wednesday", toDay: "tuesday"
+
 - "move Wednesday's session to Thursday" / "shift Friday's long run to Saturday"
   → intent: reschedule_session, fromDay: "wednesday", toDay: "thursday" / fromDay: "friday", toDay: "saturday"
 
@@ -165,7 +174,8 @@ Examples:
 
 IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.
 IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.
-IMPORTANT: reschedule_session means he wants to SWAP or MOVE a session to a different day. skip_session means he wants to mark a session as skipped/rest.`;
+IMPORTANT: reschedule_session means he wants to SWAP or MOVE a session to a different day. skip_session means he wants to mark a session as skipped/rest.
+IMPORTANT: If he mentions doing a specific workout on a different day than planned (e.g. "doing tomorrow's run today", "pulling forward my intervals", "I'll do the long run on Saturday instead"), that is reschedule_session — NOT a journal entry. The key signal is intent to change the schedule, not just narrating what happened.`;
 
 export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage> {
   try {
