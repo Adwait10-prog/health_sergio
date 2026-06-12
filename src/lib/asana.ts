@@ -102,7 +102,7 @@ export async function getProject(projectGid: string) {
 // ── Tasks ──────────────────────────────────────────────────────────────────
 
 const TASK_FIELDS =
-  "gid,name,notes,completed,completed_at,due_on,assignee,assignee.name,projects,memberships.section,parent,permalink_url,created_at,modified_at";
+  "gid,name,notes,completed,completed_at,due_on,assignee,assignee.name,projects,projects.gid,memberships.section.name,parent,permalink_url,created_at,modified_at";
 
 export async function getTask(taskGid: string): Promise<AsanaTaskData> {
   return asanaFetch<AsanaTaskData>(`/tasks/${taskGid}?opt_fields=${TASK_FIELDS}`);
