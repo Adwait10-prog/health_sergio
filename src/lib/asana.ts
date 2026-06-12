@@ -182,12 +182,17 @@ export async function addComment(taskGid: string, text: string) {
 
 export async function createSubtask(
   parentTaskGid: string,
-  name: string,
-  notes?: string
+  params: { name: string; notes?: string; assigneeGid?: string }
 ) {
   return asanaFetch<AsanaTaskData>(`/tasks/${parentTaskGid}/subtasks`, {
     method: "POST",
-    body: JSON.stringify({ data: { name, ...(notes ? { notes } : {}) } }),
+    body: JSON.stringify({
+      data: {
+        name: params.name,
+        ...(params.notes ? { notes: params.notes } : {}),
+        ...(params.assigneeGid ? { assignee: params.assigneeGid } : {}),
+      },
+    }),
   });
 }
 

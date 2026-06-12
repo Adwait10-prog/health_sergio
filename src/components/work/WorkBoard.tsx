@@ -460,6 +460,7 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
               <BotCapability icon="✍️" label="Ticket Writer" desc="Expands thin descriptions on task creation" />
               <BotCapability icon="⚠️" label="Quality Checker" desc="Flags missing fields on Ready for Dev" />
               <BotCapability icon="📊" label="Effort Suggester" desc="S/M/L estimate on every new task" />
+              <BotCapability icon="⚡" label="Subtask Generator" desc="Breaks task into subtasks, assigns to team" />
               <BotCapability icon="🧑‍💼" label="Morning Standup" desc="Team tasks in daily WhatsApp brief" />
             </div>
             <div style={{ padding: "0 14px 14px" }}>
@@ -482,8 +483,34 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
 
 function TaskRow({ task, isLast }: { task: AsanaTask; isLast: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const [generatingSubtasks, setGeneratingSubtasks] = useState(false);
+  const [subtaskResult, setSubtaskResult] = useState<Array<{ title: string; assignee: string }> | null>(null);
+  const [subtaskError, setSubtaskError] = useState<string | null>(null);
 
   const isOverdue = task.dueOn && new Date(task.dueOn) < new Date();
+
+  async function generateSubtasks(e: React.MouseEvent) {
+    e.stopPropagation();
+    setGeneratingSubtasks(true);
+    setSubtaskError(null);
+    setSubtaskResult(null);
+    try {
+      const res = await fetch("/api/asana/subtasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskGid: task.asanaGid }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setSubtaskResult(data.subtasks);
+      } else {
+        setSubtaskError(data.error ?? "Unknown error");
+      }
+    } catch (err) {
+      setSubtaskError(String(err));
+    }
+    setGeneratingSubtasks(false);
+  }
 
   return (
     <div style={{ borderBottom: isLast ? "none" : "1px solid var(--border-light)" }}>
@@ -533,29 +560,71 @@ function TaskRow({ task, isLast }: { task: AsanaTask; isLast: boolean }) {
 
       {expanded && (
         <div style={{
-          padding: "0 14px 12px 40px",
+          padding: "0 14px 14px 40px",
           fontSize: 12, color: "var(--text-2)", lineHeight: 1.7,
           background: "var(--bg-soft)",
         }}>
           {task.notes ? (
-            <>
-              <div style={{ whiteSpace: "pre-wrap" }}>
-                {task.notes.slice(0, 600)}
-                {task.notes.length > 600 && "…"}
-              </div>
-            </>
+            <div style={{ whiteSpace: "pre-wrap", marginBottom: 10 }}>
+              {task.notes.slice(0, 600)}
+              {task.notes.length > 600 && "…"}
+            </div>
           ) : (
-            <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>No description</span>
+            <div style={{ color: "var(--text-muted)", fontStyle: "italic", marginBottom: 10 }}>No description</div>
           )}
-          <br />
-          <a
-            href={task.permalink ?? `https://app.asana.com/0/0/${task.asanaGid}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "var(--technical)", textDecoration: "none", fontWeight: 600, fontSize: 11 }}
-          >
-            Open in Asana ↗
-          </a>
+
+          {/* Actions row */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <a
+              href={task.permalink ?? `https://app.asana.com/0/0/${task.asanaGid}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--technical)", textDecoration: "none", fontWeight: 600, fontSize: 11 }}
+            >
+              Open in Asana ↗
+            </a>
+
+            <button
+              onClick={generateSubtasks}
+              disabled={generatingSubtasks}
+              style={{
+                padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+                background: generatingSubtasks ? "var(--bg-soft)" : "var(--technical)",
+                color: generatingSubtasks ? "var(--text-3)" : "#fff",
+                border: "none", cursor: generatingSubtasks ? "not-allowed" : "pointer",
+              }}
+            >
+              {generatingSubtasks ? "Generating…" : "⚡ Generate Subtasks"}
+            </button>
+          </div>
+
+          {/* Subtask results */}
+          {subtaskError && (
+            <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "#FFF5F5", color: "#C0392B", fontSize: 12 }}>
+              Error: {subtaskError}
+            </div>
+          )}
+
+          {subtaskResult && (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 6px" }}>
+                {subtaskResult.length} subtasks created in Asana ✓
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {subtaskResult.map((s, i) => (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "6px 10px", borderRadius: 6,
+                    background: "var(--bg-card)", border: "1px solid var(--border)",
+                  }}>
+                    <span style={{ fontSize: 10, color: "var(--text-4)", flexShrink: 0 }}>{i + 1}</span>
+                    <span style={{ fontSize: 12, color: "var(--text-1)", flex: 1 }}>{s.title}</span>
+                    <span style={{ fontSize: 11, color: "var(--technical)", fontWeight: 600, flexShrink: 0 }}>→ {s.assignee}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
