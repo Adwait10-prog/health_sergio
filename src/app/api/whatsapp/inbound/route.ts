@@ -757,8 +757,10 @@ ${context}`,
 
       // ── Create Asana task ──────────────────────────────────────────
       case "create_asana_task": {
+        const taskTitle       = parsed.data.taskTitle       as string | null;
         const taskDescription = parsed.data.taskDescription as string | null;
         const projectHint     = parsed.data.projectHint     as string | null;
+        const sectionHint     = parsed.data.sectionHint     as string | null;
         const assigneeHint    = parsed.data.assigneeHint    as string | null;
 
         if (!taskDescription) {
@@ -766,17 +768,11 @@ ${context}`,
           break;
         }
 
-        // Check if there's a pending project selection for this phone
-        const pending = await db.whatsappPendingAction.findUnique({ where: { phone: from } });
-
-        if (pending && pending.action === "create_asana_task" && new Date() < pending.expiresAt) {
-          // This message is the project selection reply — handled in the "unknown" case above
-          // but we shouldn't reach here in that flow — this branch handles explicit new create requests
-        }
-
         const result = await createAsanaTaskFromWhatsApp({
+          taskTitle,
           taskDescription,
           projectHint,
+          sectionHint,
           assigneeHint,
           phone: from,
         });
@@ -792,15 +788,22 @@ ${context}`,
 
         if (pending && pending.action === "create_asana_task" && new Date() < pending.expiresAt) {
           // User is replying with a project name
-          const payload = JSON.parse(pending.payload) as { taskDescription: string; assigneeHint: string | null };
+          const payload = JSON.parse(pending.payload) as {
+            taskTitle: string | null;
+            taskDescription: string;
+            sectionHint: string | null;
+            assigneeHint: string | null;
+          };
           const projectReply = body.trim(); // raw message = project choice
 
           // Delete pending action
           await db.whatsappPendingAction.delete({ where: { phone: from } });
 
           const result = await createAsanaTaskFromWhatsApp({
+            taskTitle: payload.taskTitle ?? null,
             taskDescription: payload.taskDescription,
             projectHint: projectReply,
+            sectionHint: payload.sectionHint ?? null,
             assigneeHint: payload.assigneeHint,
             phone: from,
             skipPendingCheck: true,

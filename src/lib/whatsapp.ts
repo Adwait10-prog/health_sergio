@@ -97,9 +97,11 @@ Respond ONLY with valid JSON:
     //   reason: short reason string if mentioned, else null
     //
     // For create_asana_task:
-    //   taskDescription: the full task description as the user described it (preserve all detail)
+    //   taskTitle: explicit task name if user gave one (e.g. "STS editor features", "fix login redirect"), else null
+    //   taskDescription: the full task description / features / context as user described (preserve ALL detail, verbatim)
     //   projectHint: project name if mentioned (e.g. "Core Engineering", "Media Rian", "Recipe Cloud") or null
-    //   assigneeHint: person's name if mentioned (e.g. "Aryan", "assign to Raj") or null
+    //   sectionHint: section/column name if mentioned (e.g. "WIP", "Backlog", "Exploring", "Planning", "Prioritized") or null
+    //   assigneeHint: person's name if mentioned (e.g. "Aryan", "assign to Raj", "Adwait") or null
     //   Use this intent when user explicitly says "create a task", "add to asana", "asana task", "create ticket", "raise a ticket"
   },
   "reply": "warm, personal 1-2 line reply. Acknowledge what he shared. Use his name occasionally. Be like a thoughtful friend, not a bot. Use emojis sparingly."
@@ -191,16 +193,25 @@ Examples:
   → intent: skip_session, day: "tomorrow", reason: "travelling"
 
 - "create a task in Core Engineering — fix the login page redirect bug"
-  → intent: create_asana_task, taskDescription: "fix the login page redirect bug", projectHint: "Core Engineering", assigneeHint: null
+  → intent: create_asana_task, taskTitle: null, taskDescription: "fix the login page redirect bug", projectHint: "Core Engineering", sectionHint: null, assigneeHint: null
+
+- "create a task named STS editor features in Core Engineering - WIP, we need to add inline editing, version history, and export to PDF. Assign to Adwait"
+  → intent: create_asana_task, taskTitle: "STS editor features", taskDescription: "we need to add inline editing, version history, and export to PDF", projectHint: "Core Engineering", sectionHint: "WIP", assigneeHint: "Adwait"
 
 - "add to asana: update the recipe cloud onboarding flow, assign to Aryan"
-  → intent: create_asana_task, taskDescription: "update the recipe cloud onboarding flow", projectHint: "Recipe Cloud", assigneeHint: "Aryan"
+  → intent: create_asana_task, taskTitle: null, taskDescription: "update the recipe cloud onboarding flow", projectHint: "Recipe Cloud", sectionHint: null, assigneeHint: "Aryan"
 
 - "raise a ticket — the API is returning 500 on the /reports endpoint"
-  → intent: create_asana_task, taskDescription: "the API is returning 500 on the /reports endpoint", projectHint: null, assigneeHint: null
+  → intent: create_asana_task, taskTitle: null, taskDescription: "the API is returning 500 on the /reports endpoint", projectHint: null, sectionHint: null, assigneeHint: null
 
 - "create asana task: Japan market deck needs to be updated with new pricing"
-  → intent: create_asana_task, taskDescription: "Japan market deck needs to be updated with new pricing", projectHint: "Japan Market Entry", assigneeHint: null
+  → intent: create_asana_task, taskTitle: null, taskDescription: "Japan market deck needs to be updated with new pricing", projectHint: "Japan Market Entry", sectionHint: null, assigneeHint: null
+
+- "create ticket named fix dashboard filters in Core Engineering backlog — the date filter doesn't reset when switching views"
+  → intent: create_asana_task, taskTitle: "fix dashboard filters", taskDescription: "the date filter doesn't reset when switching views", projectHint: "Core Engineering", sectionHint: "backlog", assigneeHint: null
+
+- "add a task to Recipe Cloud exploring section: research feasibility of offline mode for the mobile app"
+  → intent: create_asana_task, taskTitle: null, taskDescription: "research feasibility of offline mode for the mobile app", projectHint: "Recipe Cloud", sectionHint: "exploring", assigneeHint: null
 
 IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.
 IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.

@@ -188,6 +188,19 @@ export async function getTaskComments(taskGid: string): Promise<AsanaStoryData[]
   return stories.filter(s => s.type === "comment" && s.text && !s.text.startsWith("🤖"));
 }
 
+export async function addTaskToSection(sectionGid: string, taskGid: string) {
+  return asanaFetch(`/sections/${sectionGid}/addTask`, {
+    method: "POST",
+    body: JSON.stringify({ data: { task: taskGid } }),
+  });
+}
+
+export async function getProjectSections(projectGid: string): Promise<Array<{ gid: string; name: string }>> {
+  return asanaFetch<Array<{ gid: string; name: string }>>(
+    `/projects/${projectGid}/sections?opt_fields=gid,name`
+  );
+}
+
 export async function createSubtask(
   parentTaskGid: string,
   params: { name: string; notes?: string; assigneeGid?: string }
