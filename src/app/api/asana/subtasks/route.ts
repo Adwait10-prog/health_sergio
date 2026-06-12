@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { createSubtask, addComment } from "@/lib/asana";
+import { createSubtask, addComment, getTaskComments } from "@/lib/asana";
 import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
@@ -36,14 +36,16 @@ export async function POST(req: NextRequest) {
     const { taskGid } = await req.json() as { taskGid: string };
     if (!taskGid) return NextResponse.json({ ok: false, error: "taskGid required" }, { status: 400 });
 
-    // Load task from DB
-    const task = await db.asanaTask.findUnique({ where: { asanaGid: taskGid } });
+    // Load task from DB + fetch comments from Asana in parallel
+    const [task, allMembers, comments] = await Promise.all([
+      db.asanaTask.findUnique({ where: { asanaGid: taskGid } }),
+      db.asanaMember.findMany(),
+      getTaskComments(taskGid).catch(() => []), // graceful fallback if Asana API fails
+    ]);
+
     if (!task) return NextResponse.json({ ok: false, error: "Task not found in DB — sync first" }, { status: 404 });
 
-    // Load team members from DB for GID resolution
-    const allMembers = await db.asanaMember.findMany();
-
-    // Resolve core team to { name, gid } — skip if not found
+    // Resolve core team to { name, gid }
     const teamWithGids = CORE_TEAM_NAMES.map(targetName => {
       const member = allMembers.find(m =>
         m.name.toLowerCase().includes(targetName.toLowerCase().split(" ")[0]) ||
@@ -52,16 +54,28 @@ export async function POST(req: NextRequest) {
       return { name: targetName, gid: member?.asanaGid ?? null };
     });
 
-    const techContext  = loadKnowledge("rian-tech.md");
-    const bizContext   = loadKnowledge("rian-business.md");
+    const techContext = loadKnowledge("rian-tech.md");
+    const bizContext  = loadKnowledge("rian-business.md");
+
+    // Format comments for the prompt — most recent last, skip bot comments
+    const commentsText = comments.length > 0
+      ? comments
+          .slice(-10) // last 10 comments max
+          .map(c => `[${c.created_by?.name ?? "Unknown"} — ${c.created_at?.slice(0, 10) ?? "?"}]: ${c.text.trim()}`)
+          .join("\n\n")
+      : "(no comments)";
 
     const teamList = teamWithGids.map(t => `- ${t.name}${t.gid ? "" : " (not yet in Asana)"}`).join("\n");
 
     const prompt = `You are the AI PM assistant for Rian.io. Break down this Asana task into concrete subtasks and assign each to the right person.
 
 PARENT TASK: "${task.name}"
+
 DESCRIPTION:
 ${(task.notes ?? "(no description)").slice(0, 2000)}
+
+COMMENTS & DISCUSSION (read carefully — may contain decisions, clarifications, or scope changes):
+${commentsText}
 
 TEAM (assign subtasks only to these people):
 ${teamList}
@@ -72,8 +86,10 @@ Team roles:
 - Saijash Padicharayil: backend / API / infrastructure
 - Vishal: design / creative / marketing assets (if not in Asana yet, assign to Adwait)
 
-Generate 3-6 subtasks that together complete this parent task. Each subtask should be:
-- Independently completable (no hidden dependencies between them unless necessary)
+Generate 3-6 subtasks that together complete this parent task. Use ALL available context — description AND comments. If comments mention specific decisions, constraints, or scope, reflect those in the subtasks.
+
+Each subtask should be:
+- Independently completable
 - Assigned to the most appropriate person based on their role
 - Specific and actionable (not vague like "fix it" or "review")
 
@@ -89,7 +105,7 @@ Respond ONLY with valid JSON array:
 
 ---
 RIAN TECHNICAL CONTEXT:
-${techContext.slice(0, 4000)}
+${techContext.slice(0, 3500)}
 
 RIAN BUSINESS CONTEXT:
 ${bizContext.slice(0, 1500)}`;

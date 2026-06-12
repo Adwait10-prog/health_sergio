@@ -180,6 +180,14 @@ export async function addComment(taskGid: string, text: string) {
   });
 }
 
+export async function getTaskComments(taskGid: string): Promise<AsanaStoryData[]> {
+  const stories = await asanaFetch<AsanaStoryData[]>(
+    `/tasks/${taskGid}/stories?opt_fields=gid,type,text,created_by.name,created_at&limit=50`
+  );
+  // Only return human comments (type=comment), skip system stories and bot comments
+  return stories.filter(s => s.type === "comment" && s.text && !s.text.startsWith("🤖"));
+}
+
 export async function createSubtask(
   parentTaskGid: string,
   params: { name: string; notes?: string; assigneeGid?: string }
