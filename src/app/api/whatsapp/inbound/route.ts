@@ -5,6 +5,7 @@ import { parseWhatsAppMessage, generateWeekSummary } from "@/lib/whatsapp";
 import { transcribeWhatsAppAudio, parseVoiceTranscript } from "@/lib/voiceNote";
 import { queryMemory } from "@/lib/memoryQuery";
 import { createCalendarEvent } from "@/lib/googleCalendar";
+import { createAsanaTaskFromWhatsApp } from "@/lib/asanaWhatsapp";
 import Anthropic from "@anthropic-ai/sdk";
 import twilio from "twilio";
 import { subDays, addDays, getDay } from "date-fns";
@@ -754,12 +755,72 @@ ${context}`,
         break;
       }
 
-      // ── Unknown ────────────────────────────────────────────────────
-      default: {
+      // ── Create Asana task ──────────────────────────────────────────
+      case "create_asana_task": {
+        const taskDescription = parsed.data.taskDescription as string | null;
+        const projectHint     = parsed.data.projectHint     as string | null;
+        const assigneeHint    = parsed.data.assigneeHint    as string | null;
+
+        if (!taskDescription) {
+          await sendReply(from, "What should the task be about? Give me a bit more detail and which project it's for.");
+          break;
+        }
+
+        // Check if there's a pending project selection for this phone
+        const pending = await db.whatsappPendingAction.findUnique({ where: { phone: from } });
+
+        if (pending && pending.action === "create_asana_task" && new Date() < pending.expiresAt) {
+          // This message is the project selection reply — handled in the "unknown" case above
+          // but we shouldn't reach here in that flow — this branch handles explicit new create requests
+        }
+
+        const result = await createAsanaTaskFromWhatsApp({
+          taskDescription,
+          projectHint,
+          assigneeHint,
+          phone: from,
+        });
+
+        await sendReply(from, result.message);
+        break;
+      }
+
+      // ── Pending action reply (project selection) ───────────────────
+      case "unknown": {
+        // Check if there's a pending action first
+        const pending = await db.whatsappPendingAction.findUnique({ where: { phone: from } });
+
+        if (pending && pending.action === "create_asana_task" && new Date() < pending.expiresAt) {
+          // User is replying with a project name
+          const payload = JSON.parse(pending.payload) as { taskDescription: string; assigneeHint: string | null };
+          const projectReply = body.trim(); // raw message = project choice
+
+          // Delete pending action
+          await db.whatsappPendingAction.delete({ where: { phone: from } });
+
+          const result = await createAsanaTaskFromWhatsApp({
+            taskDescription: payload.taskDescription,
+            projectHint: projectReply,
+            assigneeHint: payload.assigneeHint,
+            phone: from,
+            skipPendingCheck: true,
+          });
+
+          await sendReply(from, result.message);
+          break;
+        }
+
+        // No pending action — genuine unknown
         await sendReply(from,
           parsed.reply ||
           "Just write freely — your day, how you're feeling, what you're grateful for. I'll figure out the rest 🙂"
         );
+        break;
+      }
+
+      // ── Fallthrough ───────────────────────────────────────────────
+      default: {
+        await sendReply(from, parsed.reply || "Just write freely — your day, how you're feeling, what you're grateful for. I'll figure out the rest 🙂");
         break;
       }
     }

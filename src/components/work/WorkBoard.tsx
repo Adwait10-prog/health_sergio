@@ -151,7 +151,21 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
       {/* Header */}
       <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--technical)", margin: 0 }}>Work</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--technical)", margin: 0 }}>Work</h1>
+            <a
+              href="/work/insights"
+              style={{
+                fontSize: 12, fontWeight: 600, color: "var(--technical)",
+                textDecoration: "none", opacity: 0.75,
+                padding: "3px 8px", borderRadius: 6,
+                border: "1px solid var(--border)",
+                background: "var(--bg-soft)",
+              }}
+            >
+              Insights →
+            </a>
+          </div>
           <p style={{ fontSize: 13, marginTop: 2, color: "var(--text-muted)", margin: "2px 0 0" }}>
             Asana · {stats.totalProjects} projects · {stats.totalIncomplete} open tasks · {stats.standupCount} in standup
           </p>

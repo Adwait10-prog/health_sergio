@@ -17,8 +17,9 @@ export interface ParsedMessage {
     | "complete_task"  // "done with X" / "mark X as done"
     | "query_memory"        // "what did I discuss with X?" / "what happened last week with Y?"
     | "query_run"           // "how was my run today?" / "analyse my run"
-    | "reschedule_session"  // "swap today's run with tomorrow" / "do tomorrow's workout today"
-    | "skip_session"        // "skip today's run" / "rest today instead"
+    | "reschedule_session"   // "swap today's run with tomorrow" / "do tomorrow's workout today"
+    | "skip_session"         // "skip today's run" / "rest today instead"
+    | "create_asana_task"    // "create a task in asana — fix the login bug" / "add to asana: ..."
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -37,7 +38,7 @@ CRITICAL CLASSIFICATION RULE:
 
 Respond ONLY with valid JSON:
 {
-  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "reschedule_session" | "skip_session" | "unknown",
+  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "reschedule_session" | "skip_session" | "create_asana_task" | "unknown",
   "data": {
     // For journal:
     //   journalText: the full journal entry as-is (preserve his words exactly)
@@ -94,6 +95,12 @@ Respond ONLY with valid JSON:
     // For skip_session:
     //   day: "today" | "tomorrow" | "monday" etc — which day's session to skip (default "today")
     //   reason: short reason string if mentioned, else null
+    //
+    // For create_asana_task:
+    //   taskDescription: the full task description as the user described it (preserve all detail)
+    //   projectHint: project name if mentioned (e.g. "Core Engineering", "Media Rian", "Recipe Cloud") or null
+    //   assigneeHint: person's name if mentioned (e.g. "Aryan", "assign to Raj") or null
+    //   Use this intent when user explicitly says "create a task", "add to asana", "asana task", "create ticket", "raise a ticket"
   },
   "reply": "warm, personal 1-2 line reply. Acknowledge what he shared. Use his name occasionally. Be like a thoughtful friend, not a bot. Use emojis sparingly."
 }
@@ -183,10 +190,23 @@ Examples:
 - "skip tomorrow's gym session, I'm travelling"
   → intent: skip_session, day: "tomorrow", reason: "travelling"
 
+- "create a task in Core Engineering — fix the login page redirect bug"
+  → intent: create_asana_task, taskDescription: "fix the login page redirect bug", projectHint: "Core Engineering", assigneeHint: null
+
+- "add to asana: update the recipe cloud onboarding flow, assign to Aryan"
+  → intent: create_asana_task, taskDescription: "update the recipe cloud onboarding flow", projectHint: "Recipe Cloud", assigneeHint: "Aryan"
+
+- "raise a ticket — the API is returning 500 on the /reports endpoint"
+  → intent: create_asana_task, taskDescription: "the API is returning 500 on the /reports endpoint", projectHint: null, assigneeHint: null
+
+- "create asana task: Japan market deck needs to be updated with new pricing"
+  → intent: create_asana_task, taskDescription: "Japan market deck needs to be updated with new pricing", projectHint: "Japan Market Entry", assigneeHint: null
+
 IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. Don't summarize or paraphrase. Extract gratitude/lessons as bonus fields only if clearly present.
 IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.
 IMPORTANT: reschedule_session means he wants to SWAP or MOVE a session to a different day. skip_session means he wants to mark a session as skipped/rest.
-IMPORTANT: If he mentions doing a specific workout on a different day than planned (e.g. "doing tomorrow's run today", "pulling forward my intervals", "I'll do the long run on Saturday instead"), that is reschedule_session — NOT a journal entry. The key signal is intent to change the schedule, not just narrating what happened.`;
+IMPORTANT: If he mentions doing a specific workout on a different day than planned (e.g. "doing tomorrow's run today", "pulling forward my intervals", "I'll do the long run on Saturday instead"), that is reschedule_session — NOT a journal entry. The key signal is intent to change the schedule, not just narrating what happened.
+IMPORTANT: create_asana_task is ONLY for when he explicitly wants to create a task in Asana (says "create task", "add to asana", "raise a ticket", "create ticket"). A general reminder or personal task goes to add_task instead.`;
 
 export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage> {
   try {

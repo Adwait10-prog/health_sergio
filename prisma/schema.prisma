@@ -406,3 +406,12 @@ model StravaActivity {
   syncedAt    DateTime @default(now())
   @@index([userId, date])
 }
+
+model WhatsappPendingAction {
+  id        String   @id @default(cuid())
+  phone     String   @unique  // e.g. "whatsapp:+918169159063"
+  action    String   // e.g. "create_asana_task"
+  payload   String   // JSON blob with pending context
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
