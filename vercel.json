@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/whatsapp/nudge",
-      "schedule": "30 15 * * *"
+      "schedule": "0 17 * * *"
     }
   ]
 }

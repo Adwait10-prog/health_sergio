@@ -7,6 +7,7 @@ const NAV = [
   { href: "/",           label: "Today",      icon: "⊞", accent: "var(--c-today)",      bg: "var(--c-today-bg)" },
   { href: "/fitness",    label: "Fitness",    icon: "◎", accent: "var(--c-fitness)",     bg: "var(--c-fitness-bg)" },
   { href: "/technical",  label: "Technical",  icon: "</>", accent: "var(--c-technical)", bg: "var(--c-technical-bg)" },
+  { href: "/work",       label: "Work",       icon: "⬡", accent: "var(--c-technical)",  bg: "var(--c-technical-bg)" },
   { href: "/founder",    label: "Founder",    icon: "✦", accent: "var(--c-founder)",     bg: "var(--c-founder-bg)" },
   { href: "/finance",    label: "Finance",    icon: "$", accent: "var(--c-finance)",     bg: "var(--c-finance-bg)" },
   { href: "/reflection", label: "Reflection", icon: "☐", accent: "var(--c-reflection)", bg: "var(--c-reflection-bg)" },
