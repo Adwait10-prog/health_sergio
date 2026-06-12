@@ -317,6 +317,70 @@ model StravaToken {
   updatedAt DateTime @updatedAt
 }
 
+// ── Asana Integration ─────────────────────────────────────────────────────────
+
+model AsanaProject {
+  id          String   @id @default(cuid())
+  asanaGid    String   @unique   // Asana's project GID
+  name        String
+  color       String?
+  isTracked   Boolean  @default(true)  // whether to process webhooks for this project
+  workspaceGid String
+  syncedAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks       AsanaTask[]
+}
+
+model AsanaTask {
+  id             String   @id @default(cuid())
+  asanaGid       String   @unique
+  projectGid     String?
+  project        AsanaProject? @relation(fields: [projectGid], references: [asanaGid])
+  name           String
+  notes          String?  // description
+  assigneeGid    String?
+  assigneeName   String?
+  status         String   @default("incomplete")  // incomplete | complete
+  completedAt    DateTime?
+  dueOn          String?  // YYYY-MM-DD string (Asana format)
+  sectionName    String?
+  parentGid      String?  // for subtasks
+  permalink      String?
+  isModifiedByBot Boolean @default(false)  // true if bot wrote the description
+  createdAt      DateTime @default(now())
+  syncedAt       DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectGid])
+  @@index([assigneeGid])
+  @@index([status])
+}
+
+model AsanaMember {
+  id          String   @id @default(cuid())
+  asanaGid    String   @unique
+  name        String
+  email       String?
+  inStandup   Boolean  @default(false)  // user-selected: include in morning standup
+  workspaceGid String
+  syncedAt    DateTime @default(now())
+}
+
+model AsanaWebhookEvent {
+  id          String   @id @default(cuid())
+  eventType   String   // task.added | task.changed | story.added etc.
+  resourceGid String   // task or story GID
+  projectGid  String?
+  rawPayload  String   // full JSON from Asana
+  processed   Boolean  @default(false)
+  error       String?
+  receivedAt  DateTime @default(now())
+
+  @@index([processed])
+  @@index([resourceGid])
+}
+
 model StravaActivity {
   id          String   @id @default(cuid())
   userId      String

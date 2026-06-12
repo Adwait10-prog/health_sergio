@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
 import { getTodayHMSession, getRaceCountdown, getCurrentWeekHMStats } from "@/lib/hmTracker";
+import { fetchStandupData, formatStandupForBrief } from "@/lib/asanaHandlers";
 import { subDays, format, getDay, addDays } from "date-fns";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -123,11 +124,12 @@ export async function fetchBriefData() {
 
   const journalStreak = last7Reflections.length;
 
-  // HM training data
-  const [todaySession, daysToRace, weekStats] = await Promise.all([
+  // HM training data + standup
+  const [todaySession, daysToRace, weekStats, standupEntries] = await Promise.all([
     getTodayHMSession(),
     getRaceCountdown(),
     getCurrentWeekHMStats(),
+    fetchStandupData().catch(() => []),  // graceful fallback if Asana is down
   ]);
 
   // Habit streak summary (just counts, not full history)
@@ -172,6 +174,7 @@ export async function fetchBriefData() {
     lastWeekKm,  // non-null only on Mondays
     habitCounts,
     openTasks: openTasks.slice(0, 5).map(t => t.title),
+    standup: formatStandupForBrief(standupEntries),
     recentActivity: last7Strava[0] ? {
       name: last7Strava[0].name,
       type: last7Strava[0].type,
@@ -295,13 +298,15 @@ Data:
 - Journal streak: ${data.habitCounts.journal}/7 days this week
 - Yesterday's journal: ${data.yesterdayJournal ?? "nothing logged"}
 - Open tasks: ${data.openTasks.length > 0 ? data.openTasks.join(", ") : "none"}
+${data.standup ? `\nTeam standup:\n${data.standup}` : ""}
 
 Rules:
 1. Start with "Good morning Adwait 🌅" and the date
 2. One line on today's training with any recovery note if HRV/RHR warrants it
 3. One line referencing something from yesterday's journal if available (make it personal)
 4. One line on top open task if any
-5. End with one sharp focus question or challenge for the day`;
+5. If team standup data is present, include it as a clean section after your personal tasks
+6. End with one sharp focus question or challenge for the day`;
 
   // Run brief + delusional belief in parallel
   const [briefText, beliefText] = await Promise.all([
