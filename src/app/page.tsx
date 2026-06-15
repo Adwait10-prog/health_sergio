@@ -5,6 +5,7 @@ import { startOfDay, startOfWeek, subDays, format } from "date-fns";
 import { todayUTC, yesterdayUTC, daysAgoUTC } from "@/lib/date";
 import { getTodayHMSession, getCurrentWeekHMStats, getRaceCountdown } from "@/lib/hmTracker";
 import { getPatternInsights } from "@/lib/patternInsights";
+import Link from "next/link";
 import ScoreRing from "@/components/today/ScoreRing";
 import HabitStreaks from "@/components/today/HabitStreaks";
 import DeepWorkTimer from "@/components/today/DeepWorkTimer";
@@ -50,12 +51,16 @@ export default async function TodayPage() {
   const last28DB   = daysAgoUTC(28);
   const last35DB   = daysAgoUTC(35);
 
+  // Adwait's Asana GID — used to filter WIP tasks assigned to him
+  const ADWAIT_GID = "1212972818193396";
+
   const [
     todayLog, yesterdayLog, last7Logs, todayTasks,
     weekTechLogs, weekFounderLogs,
     last35TechLogs, last35FounderLogs,
     last7Strava, last28Strava,
     last35Reflections,
+    wipTasks,
   ] = await Promise.all([
     db.dailyLog.findFirst({ where: { userId, date: todayDB } }),
     db.dailyLog.findFirst({ where: { userId, date: yesterdayDB } }),
@@ -68,6 +73,17 @@ export default async function TodayPage() {
     db.stravaActivity.findMany({ where: { userId, date: { gte: last7Start } }, orderBy: { date: "desc" } }),
     db.stravaActivity.findMany({ where: { userId, date: { gte: last28Start } }, orderBy: { date: "desc" } }),
     db.reflection.findMany({ where: { userId, type: "daily", date: { gte: last35DB } } }),
+    db.asanaTask.findMany({
+      where: {
+        assigneeGid: ADWAIT_GID,
+        status: "incomplete",
+        parentGid: null,
+        sectionName: { in: ["WIP", "Work in Progress", "In Progress", "Prioritized", "Exploring", "Planning/Scoping"] },
+      },
+      orderBy: { syncedAt: "desc" },
+      take: 5,
+      select: { asanaGid: true, name: true, sectionName: true, dueOn: true, permalink: true, project: { select: { name: true } } },
+    }),
   ]);
 
   // last7 slices for score enrichment
@@ -327,6 +343,42 @@ export default async function TodayPage() {
           <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: "var(--c-founder)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>💡 Coach Insights · 30 days</div>
             <p style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.6, margin: 0 }}>{patternInsights}</p>
+          </div>
+
+          {/* Asana WIP strip */}
+          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--c-technical)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                ⬡ Active Work · Asana
+              </div>
+              <Link href="/work" style={{ fontSize: 11, color: "var(--text-4)", textDecoration: "none" }}>All tasks →</Link>
+            </div>
+            {wipTasks.length === 0 ? (
+              <p style={{ fontSize: 12, color: "var(--text-4)", margin: 0 }}>No WIP tasks assigned to you right now.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {wipTasks.map(t => (
+                  <a
+                    key={t.asanaGid}
+                    href={t.permalink ?? `https://app.asana.com/0/${t.asanaGid}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: "flex", alignItems: "flex-start", gap: 8, textDecoration: "none", padding: "7px 8px", borderRadius: 6, background: "var(--bg-subtle)" }}
+                  >
+                    <span style={{ marginTop: 1, fontSize: 13, flexShrink: 0, color: "var(--c-technical)" }}>◈</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-1)", lineHeight: 1.35, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {t.name}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--text-4)", marginTop: 2 }}>
+                        {t.project?.name ?? "—"}
+                        {t.dueOn && <span style={{ color: new Date(t.dueOn) < new Date() ? "var(--c-warn)" : "var(--text-4)" }}> · due {t.dueOn}</span>}
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tasks */}
