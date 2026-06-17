@@ -201,6 +201,12 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
               padding: "3px 8px", borderRadius: 6,
               border: "1px solid var(--border)", background: "var(--bg-soft)",
             }}>Insights →</a>
+            <a href="/work/roadmap" style={{
+              fontSize: 12, fontWeight: 600, color: "var(--technical)",
+              textDecoration: "none", opacity: 0.75,
+              padding: "3px 8px", borderRadius: 6,
+              border: "1px solid var(--border)", background: "var(--bg-soft)",
+            }}>Roadmap →</a>
           </div>
           <p style={{ fontSize: 13, marginTop: 2, color: "var(--text-muted)", margin: "2px 0 0" }}>
             Asana · {stats.totalProjects} projects · {stats.totalIncomplete} open tasks · {stats.standupCount} in standup
