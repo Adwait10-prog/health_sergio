@@ -12,11 +12,14 @@ export interface RoadmapItem {
   match?: string[];
 }
 
+export type Tier = "focus" | "supporting";
+
 export interface RoadmapTheme {
   id: number;
   name: string;
   emoji: string;
   status: ThemeStatus;
+  tier: Tier;
   objective: string;
   whyItMatters: string[];
   successMetrics: string[];
@@ -27,6 +30,17 @@ export interface RoadmapTheme {
   owner: string;
   // Asana projects this theme draws evidence from (for live ticket counts)
   projects?: string[];
+}
+
+// R&D pipeline — stage axis instead of Now/Next/Later (honest grammar for research).
+export type RndStage = "exploring" | "validating" | "productizing" | "graduated";
+
+export interface RndTrack {
+  name: string;
+  stage: RndStage;
+  what: string;   // what it is
+  why: string;    // why it matters
+  match?: string[]; // keywords to link live Asana tickets
 }
 
 export interface HealthMetric {
@@ -65,6 +79,7 @@ export const THEMES: RoadmapTheme[] = [
     name: "Rian Recipe — STS Tool",
     emoji: "🎙️",
     status: "active",
+    tier: "focus",
     objective: "Enhance the core Speech-to-Speech dubbing tool — the flagship product. Automate the manual QC/ingestion loop and ship new features (per the Tech Roadmap).",
     whyItMatters: [
       "The STS tool is Rian's core revenue product (the Recipe Method)",
@@ -106,6 +121,7 @@ export const THEMES: RoadmapTheme[] = [
     name: "Self-Serve Launch",
     emoji: "🚀",
     status: "critical",
+    tier: "focus",
     objective: "Launch the first self-serve version of Rian and validate real customer acquisition.",
     whyItMatters: [
       "First recurring revenue channel",
@@ -146,6 +162,7 @@ export const THEMES: RoadmapTheme[] = [
     name: "Translation Quality Platform",
     emoji: "🎯",
     status: "active",
+    tier: "supporting",
     objective: "Create industry-leading translation quality and consistency — Rian's primary moat.",
     whyItMatters: [
       "Quality directly drives customer retention",
@@ -184,6 +201,7 @@ export const THEMES: RoadmapTheme[] = [
     name: "Infrastructure & Cost Optimization",
     emoji: "⚙️",
     status: "planned",
+    tier: "supporting",
     objective: "Improve margins through infrastructure ownership — convert paid-API spend into owned infra.",
     whyItMatters: [
       "Current vendor costs scale linearly with volume",
@@ -219,6 +237,7 @@ export const THEMES: RoadmapTheme[] = [
     name: "Enterprise Readiness",
     emoji: "🏢",
     status: "upcoming",
+    tier: "supporting",
     objective: "Prepare Rian for larger enterprise contracts (TPN-framework clients: Amazon, Disney+, JioStar).",
     whyItMatters: [
       "Enterprise deals require security, governance, auditability",
@@ -253,6 +272,7 @@ export const THEMES: RoadmapTheme[] = [
     name: "AI Platform Expansion",
     emoji: "🤖",
     status: "upcoming",
+    tier: "supporting",
     objective: "Increase engineering velocity, then expand Rian into an AI content-operations platform.",
     whyItMatters: [
       "Faster engineering org via AI-assisted dev",
@@ -286,6 +306,7 @@ export const THEMES: RoadmapTheme[] = [
     name: "Website Live Translation",
     emoji: "🌐",
     status: "critical",
+    tier: "focus",
     objective: "Validate website localization as a new product category — client owns 100% of translation data.",
     whyItMatters: [
       "New market expansion",
@@ -322,14 +343,73 @@ export const THEMES: RoadmapTheme[] = [
   },
 ];
 
-export const RND_WATCHLIST = [
-  "Self-hosted MT models",
-  "Voice cloning pipeline",
-  "Agentic QA review",
-  "Translation memory AI",
-  "AI-assisted localization",
-  "GPU optimization",
+// R&D pillar — concentrated on owning the voice & audio pipeline our margins depend on.
+export const RND_THESIS =
+  "Rian's R&D is concentrated on owning the voice & audio pipeline our margins depend on — from training data, to synthesis, to QC. Each track graduates into a product theme as it matures.";
+
+export const RND_TRACKS: RndTrack[] = [
+  {
+    name: "TTS+ / MOSS-TTS",
+    stage: "validating",
+    what: "Self-hosted voice generation stack evaluated as an ElevenLabs alternative.",
+    why: "Voice synthesis is the single largest per-call API dependency — owning it changes our margin structure at scale.",
+    match: ["tts+", "moss-tts", "moss tts"],
+  },
+  {
+    name: "Hybrid TTS + Human Dubbing",
+    stage: "exploring",
+    what: "AI voice + targeted human performance to hit broadcast quality at lower cost than full human dubbing.",
+    why: "Attacks per-minute cost on the highest-volume service while protecting the Amazon/Disney quality bar.",
+    match: ["hybrid tts", "hybrid"],
+  },
+  {
+    name: "Missing Dialogue Detection",
+    stage: "validating",
+    what: "Aligns source script against the audio waveform to auto-flag dropped or unrecorded dialogue.",
+    why: "Missed segments are a recurring QC failure caught manually today — automating removes a defect class.",
+    match: ["missing dialogue"],
+  },
+  {
+    name: "OCR + Image Translation",
+    stage: "productizing",
+    what: "Document/image translation: extract text → translate → re-render at original coordinates.",
+    why: "Technical core of the DT product line; ~25–50× cheaper than per-image API translation.",
+    match: ["ocr", "image translation"],
+  },
+  {
+    name: "STTS Training Data Pipeline",
+    stage: "exploring",
+    what: "Dataset curation + prep that feeds custom speech-to-speech model training.",
+    why: "Every self-hosted model ambition (TTS+, hybrid) is gated on clean, well-structured training data.",
+    match: ["data pipeline", "sttS", "stts"],
+  },
+  {
+    name: "SRT + Translation Prototype",
+    stage: "validating",
+    what: "Claude-based subtitle generation + transcreation, tested on Shochiku / Tarak Mehta content.",
+    why: "Fastest path to a near-term subtitle product; proving ground for subtitle automation before human QC.",
+    match: ["srt", "subtitle"],
+  },
+  {
+    name: "Website Live Translation",
+    stage: "graduated",
+    what: "1-tag website localization, client-owned data, Rian QC. Now a focus product.",
+    why: "Proof the pipeline works: graduated R&D → product. Demo this week.",
+    match: ["website live translation", "live translation"],
+  },
+  {
+    name: "Recipe Cloud Self-Serve",
+    stage: "graduated",
+    what: "Product-led self-service motion. Past research, now launching.",
+    why: "Tests whether the tech sells without a sales team. Graduated R&D → product.",
+    match: ["self serve", "self-serve"],
+  },
 ];
+
+export const RND_STAGE_ORDER: RndStage[] = ["exploring", "validating", "productizing", "graduated"];
+export const RND_STAGE_LABEL: Record<RndStage, string> = {
+  exploring: "Exploring", validating: "Validating", productizing: "Productizing", graduated: "Graduated",
+};
 
 export const RISK_REGISTER = {
   high: ["Self-serve launch stability", "Website translation demo scope"],

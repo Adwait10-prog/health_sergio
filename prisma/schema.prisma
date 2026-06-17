@@ -415,3 +415,15 @@ model WhatsappPendingAction {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+// Per-theme completion snapshot — powers the trend caret on the roadmap.
+// One row per (themeId, day); we read the most recent PRIOR snapshot to diff against.
+model RoadmapSnapshot {
+  id           String   @id @default(cuid())
+  themeId      Int
+  completedPct Int      // 0-100
+  totalTickets Int
+  capturedAt   DateTime @default(now())
+
+  @@index([themeId, capturedAt])
+}
