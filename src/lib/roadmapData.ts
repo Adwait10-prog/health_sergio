@@ -332,6 +332,18 @@ export const TIMELINE: TimelineMonth[] = [
   },
 ];
 
+// All Asana project names the roadmap is aware of (for triage scanning).
+// Tickets in these projects that don't match any theme keyword surface in "Needs triage".
+export const ALL_TRACKED_PROJECTS = [
+  "Core Engineering",
+  "Recipe Cloud",
+  "Updates",
+  "Media Squad",
+  "Media Rian",
+  "Japan Market Entry",
+  "Brand Guidelines & Messaging",
+];
+
 export const CTO_COMMENTARY = {
   intro: "Current strategy prioritizes revenue validation before platform expansion.",
   next60: [
