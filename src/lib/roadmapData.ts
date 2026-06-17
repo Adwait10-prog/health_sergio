@@ -42,26 +42,67 @@ export interface TimelineMonth {
 }
 
 export const PRIORITIES = [
-  "Recipe Cloud Launch",
+  "Recipe Cloud Self-Serve Launch",
   "Website Translation Demo",
+  "Rian Recipe STS — Phase I automation",
   "Secrets Manager Rollout",
-  "Translation Infrastructure Improvements",
-  "AI R&D Programs",
-  "Enterprise Scale Features",
+  "Translation Quality & Infra",
+  "Enterprise / AI Platform (later)",
 ];
 
 export const HEALTH_METRICS: HealthMetric[] = [
-  { label: "Self-Serve Launch Readiness", status: "critical", statusText: "92% · UX testing", target: "100% live" },
-  { label: "Website Translation MVP",     status: "critical", statusText: "Demo scheduled",   target: "Pilot ready" },
-  { label: "Translation Quality Program", status: "active",   statusText: "Active",            target: "Enterprise grade" },
-  { label: "Infrastructure Cost Reduction", status: "planned", statusText: "Planned",          target: "−40% cost" },
-  { label: "Enterprise Readiness",        status: "upcoming", statusText: "Upcoming",          target: "Q4" },
-  { label: "AI Platform Expansion",       status: "upcoming", statusText: "Upcoming",          target: "Q4" },
+  { label: "Rian Recipe (STS Tool)",      status: "active",   statusText: "Phase I — active dev", target: "Automated QC loop" },
+  { label: "Self-Serve Launch Readiness", status: "critical", statusText: "92% · UX testing",     target: "100% live" },
+  { label: "Website Translation MVP",     status: "critical", statusText: "Demo scheduled",       target: "Pilot ready" },
+  { label: "Translation Quality Program", status: "active",   statusText: "Active",               target: "Enterprise grade" },
+  { label: "Infrastructure Cost Reduction", status: "planned", statusText: "Planned",             target: "−40% cost" },
+  { label: "Enterprise / AI Platform",    status: "upcoming", statusText: "Upcoming",             target: "Q4" },
 ];
 
 export const THEMES: RoadmapTheme[] = [
   {
     id: 1,
+    name: "Rian Recipe — STS Tool",
+    emoji: "🎙️",
+    status: "active",
+    objective: "Enhance the core Speech-to-Speech dubbing tool — the flagship product. Automate the manual QC/ingestion loop and ship new features (per the Tech Roadmap).",
+    whyItMatters: [
+      "The STS tool is Rian's core revenue product (the Recipe Method)",
+      "Manual QC handoff & cross-referencing are the biggest time sinks today",
+      "Faster, automated dubbing loop = higher delivery throughput & margin",
+    ],
+    successMetrics: [
+      "Box export loop closes (no manual re-upload)",
+      "Missing-dialogue detection live — auto timestamps",
+      "Editor fast enough for vendors (no platform-hopping)",
+      "Weekly release cadence with safe rollback",
+    ],
+    now: [
+      { label: "Phase 0 ✓ — Quick STS, Box import, track downloads (live)", state: "done", match: ["quick sts", "track download"] },
+      { label: "Export to Box (Rian API) — two-way sync", state: "in_progress", match: ["export to box", "box integration"] },
+      { label: "Missing Dialogue Detection (script→waveform)", state: "in_progress", match: ["missing dialogue", "missing dialogue identification"] },
+      { label: "STS Editor enhancements + speed/perf", state: "in_progress", match: ["sts editor enhancements", "sts editor", "recipe cloud discussion"] },
+    ],
+    next: [
+      { label: "Character creation from script", state: "todo", match: ["character creation"] },
+      { label: "Automated track renaming (waveform, human-in-loop)", state: "todo", match: ["track renaming", "automated track"] },
+      { label: "Contextual workflows (embedded iframes)", state: "todo", match: ["contextual workflow", "iframe"] },
+      { label: "Automated end-cut QC before vendor submission", state: "todo", match: ["end-cut", "audio qc"] },
+    ],
+    later: [
+      { label: "Weekly release cycle (4wk → 1wk) + auto-rollback", state: "todo", match: ["release cycle"] },
+      { label: "Sprint fixes — pagination, Speaker Boost defaults", state: "todo" },
+      { label: "Full autopilot track renaming (post-calibration)", state: "todo" },
+    ],
+    risks: [
+      "Track-renaming autopilot needs human-in-loop calibration first (2–3 episodes)",
+      "Weekly release cadence requires safe DB-migration + rollback infra before turning on",
+    ],
+    owner: "Adwait / Saijash · sync w/ Sumant on timeline",
+    projects: ["Media Squad", "Core Engineering", "Recipe Cloud"],
+  },
+  {
+    id: 2,
     name: "Self-Serve Launch",
     emoji: "🚀",
     status: "critical",
@@ -101,7 +142,7 @@ export const THEMES: RoadmapTheme[] = [
     projects: ["Recipe Cloud"],
   },
   {
-    id: 2,
+    id: 3,
     name: "Translation Quality Platform",
     emoji: "🎯",
     status: "active",
@@ -139,7 +180,7 @@ export const THEMES: RoadmapTheme[] = [
     projects: ["Core Engineering", "Updates"],
   },
   {
-    id: 3,
+    id: 4,
     name: "Infrastructure & Cost Optimization",
     emoji: "⚙️",
     status: "planned",
@@ -174,7 +215,7 @@ export const THEMES: RoadmapTheme[] = [
     projects: ["Core Engineering"],
   },
   {
-    id: 4,
+    id: 5,
     name: "Enterprise Readiness",
     emoji: "🏢",
     status: "upcoming",
@@ -208,7 +249,7 @@ export const THEMES: RoadmapTheme[] = [
     projects: ["Core Engineering"],
   },
   {
-    id: 5,
+    id: 6,
     name: "AI Platform Expansion",
     emoji: "🤖",
     status: "upcoming",
@@ -241,7 +282,7 @@ export const THEMES: RoadmapTheme[] = [
     projects: ["Core Engineering"],
   },
   {
-    id: 6,
+    id: 7,
     name: "Website Live Translation",
     emoji: "🌐",
     status: "critical",
