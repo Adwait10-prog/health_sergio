@@ -7,6 +7,19 @@ import path from "path";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
+// Belt-and-suspenders: strip any residual markdown so output is always clean plain text.
+function stripMarkdown(s: string): string {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, "$1")        // **bold**
+    .replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1$2") // *italic* (not bullet stars)
+    .replace(/`{1,3}([^`]+)`{1,3}/g, "$1")  // `code`
+    .replace(/^#{1,6}\s+/gm, "")            // # headers
+    .replace(/^\s*[-*]{3,}\s*$/gm, "")      // --- / *** horizontal rules
+    .replace(/—/g, ",")                 // em dash → comma (house style)
+    .replace(/\n{3,}/g, "\n\n")             // collapse extra blank lines
+    .trim();
+}
+
 function loadKnowledge(...filenames: string[]): string {
   return filenames
     .map(fn => {
@@ -92,7 +105,14 @@ ${rndLines}
 
 KNOWN RISKS — High: ${RISK_REGISTER.high.join("; ")}
 
-Write the update in this structure (use plain text with simple headers, NO markdown tables, NO emoji, no em dashes — Rian's house style avoids em dashes):
+FORMATTING RULES (strict):
+- PLAIN TEXT ONLY. Do NOT use any markdown: no asterisks (** or *), no hash headers (#), no horizontal rules (---), no backticks.
+- Write section headers as plain uppercase words on their own line (e.g. "HEADLINE", "SHIPPED THIS WEEK").
+- Use a simple hyphen "- " for bullets. To emphasize a label inside a bullet, just write it followed by a colon (e.g. "STS Editor v25.5: ...") — never wrap it in asterisks.
+- No emoji. No em dashes (use a comma, colon, or period instead) — Rian's house style avoids them.
+- Separate sections with a single blank line, not a divider line.
+
+Write the update in this structure:
 
 HEADLINE
 One or two sentences: the single most important thing the CEO should know this week.
@@ -124,7 +144,8 @@ ${bizContext.slice(0, 1500)}`;
       messages: [{ role: "user", content: prompt }],
     });
 
-    const update = (response.content[0] as { text: string }).text.trim();
+    const raw = (response.content[0] as { text: string }).text.trim();
+    const update = stripMarkdown(raw);
 
     return NextResponse.json({
       ok: true,
