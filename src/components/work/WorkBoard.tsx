@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { DASHBOARD_TOKENS, MONO, tnum } from "./dashboardTokens";
 
 interface AsanaTask {
   id: string;
@@ -62,8 +63,8 @@ const ASANA_COLORS: Record<string, string> = {
 };
 
 function getProjectColor(color: string | null): string {
-  if (!color) return "var(--text-3)";
-  return ASANA_COLORS[color] ?? "var(--text-3)";
+  if (!color) return "var(--t4)";
+  return ASANA_COLORS[color] ?? "var(--t4)";
 }
 
 function timeAgo(iso: string): string {
@@ -76,7 +77,6 @@ function timeAgo(iso: string): string {
   return `${Math.floor(hr / 24)}d ago`;
 }
 
-// Section display order — mirrors Asana's typical workflow order
 const SECTION_ORDER = [
   "sales initiatives", "exploring", "planning/scoping", "planning", "scoping",
   "prioritized", "work in progress", "in progress", "feedback pending", "in review",
@@ -94,6 +94,22 @@ function sortSections(sections: string[]): string[] {
   });
 }
 
+const navPill: React.CSSProperties = {
+  fontSize: 12, fontWeight: 500, color: "var(--t2)", textDecoration: "none",
+  padding: "5px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)",
+};
+const cardShell: React.CSSProperties = {
+  background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12,
+  overflow: "hidden", boxShadow: "var(--shadow-sm)",
+};
+const cardHeader: React.CSSProperties = {
+  padding: "12px 14px", borderBottom: "1px solid var(--border-soft)",
+};
+const monoLabel: React.CSSProperties = {
+  fontFamily: MONO, fontSize: 10, fontWeight: 600, letterSpacing: ".1em",
+  textTransform: "uppercase", color: "var(--t4)",
+};
+
 export default function WorkBoard({ projects, members, recentEvents, stats }: Props) {
   const [activeProject, setActiveProject] = useState<string | null>(
     projects.length > 0 ? projects[0].asanaGid : null
@@ -110,7 +126,6 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
 
   const selectedProject = projects.find(p => p.asanaGid === activeProject);
 
-  // Get unique assignees for filter chips
   const assignees = useMemo(() => {
     if (!selectedProject) return [];
     const map = new Map<string, string>();
@@ -120,14 +135,12 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
     return Array.from(map.values()).sort();
   }, [selectedProject]);
 
-  // Filter tasks by selected assignee
   const filteredTasks = useMemo(() => {
     if (!selectedProject) return [];
     if (!selectedAssignee) return selectedProject.tasks;
     return selectedProject.tasks.filter(t => t.assigneeName === selectedAssignee);
   }, [selectedProject, selectedAssignee]);
 
-  // Group by section (preserving Asana order)
   const tasksBySection = useMemo(() => {
     const acc: Record<string, AsanaTask[]> = {};
     for (const task of filteredTasks) {
@@ -140,7 +153,6 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
 
   const sortedSections = sortSections(Object.keys(tasksBySection));
 
-  // Standup members — selected first, then search results
   const selectedMembers = members.filter(m => memberStates[m.asanaGid]);
   const unselectedMembers = members
     .filter(m => !memberStates[m.asanaGid])
@@ -169,7 +181,7 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
       const res = await fetch("/api/asana/sync-trigger", { method: "POST" });
       const data = await res.json();
       if (data.ok) {
-        setSyncMsg(`✓ Synced: ${data.projects} projects · ${data.tasks} tasks · ${data.members} members — refresh to see changes`);
+        setSyncMsg(`Synced: ${data.projects} projects · ${data.tasks} tasks · ${data.members} members — refresh to see changes`);
       } else {
         setSyncMsg(`Error: ${data.error}`);
       }
@@ -189,301 +201,250 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
   }
 
   return (
-    <div style={{ padding: "24px 20px", maxWidth: 1400, margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--technical)", margin: 0 }}>Work</h1>
-            <a href="/work/insights" style={{
-              fontSize: 12, fontWeight: 600, color: "var(--technical)",
-              textDecoration: "none", opacity: 0.75,
-              padding: "3px 8px", borderRadius: 6,
-              border: "1px solid var(--border)", background: "var(--bg-soft)",
-            }}>Insights →</a>
-            <a href="/work/roadmap" style={{
-              fontSize: 12, fontWeight: 600, color: "var(--technical)",
-              textDecoration: "none", opacity: 0.75,
-              padding: "3px 8px", borderRadius: 6,
-              border: "1px solid var(--border)", background: "var(--bg-soft)",
-            }}>Roadmap →</a>
-            <a href="/work/analysis" style={{
-              fontSize: 12, fontWeight: 600, color: "var(--technical)",
-              textDecoration: "none", opacity: 0.75,
-              padding: "3px 8px", borderRadius: 6,
-              border: "1px solid var(--border)", background: "var(--bg-soft)",
-            }}>Analysis →</a>
-          </div>
-          <p style={{ fontSize: 13, marginTop: 2, color: "var(--text-muted)", margin: "2px 0 0" }}>
-            Asana · {stats.totalProjects} projects · {stats.totalIncomplete} open tasks · {stats.standupCount} in standup
-          </p>
-        </div>
-        <button onClick={runSync} disabled={isSyncing} style={{
-          padding: "8px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-          background: isSyncing ? "var(--bg-soft)" : "var(--technical)",
-          color: isSyncing ? "var(--text-3)" : "#fff",
-          border: "none", cursor: isSyncing ? "not-allowed" : "pointer",
-        }}>
-          {isSyncing ? "Syncing..." : "↻ Sync Asana"}
-        </button>
-      </div>
+    <div style={{ ...DASHBOARD_TOKENS, padding: "28px 36px 72px" }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
 
-      {syncMsg && (
-        <div style={{
-          marginBottom: 16, padding: "10px 14px", borderRadius: 8, fontSize: 13,
-          background: syncMsg.startsWith("Error") ? "#FFF5F5" : "#F0FFF4",
-          color: syncMsg.startsWith("Error") ? "#C0392B" : "#27AE60",
-          border: `1px solid ${syncMsg.startsWith("Error") ? "#FBBCBA" : "#9AE6B4"}`,
-        }}>{syncMsg}</div>
-      )}
-
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 256px", gap: 20, alignItems: "start" }}>
-
-        {/* ── Left: Projects + Standup ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-          {/* Projects */}
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border-light)" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
-                Projects ({projects.length})
-              </p>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+              <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-.02em", margin: 0 }}>Work</h1>
+              <a href="/work/insights" style={navPill}>Insights →</a>
+              <a href="/work/roadmap" style={navPill}>Roadmap →</a>
+              <a href="/work/analysis" style={navPill}>Analysis →</a>
             </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <p style={{ fontSize: 12.5, color: "var(--t4)", margin: "8px 0 0", fontFamily: MONO }}>
+              Asana · {stats.totalProjects} projects · {stats.totalIncomplete} open tasks · {stats.standupCount} in standup
+            </p>
+          </div>
+          <button onClick={runSync} disabled={isSyncing} style={{
+            fontSize: 12.5, fontWeight: 600, color: "#fff",
+            background: isSyncing ? "var(--t4)" : "var(--accent)",
+            border: "none", borderRadius: 9, padding: "9px 16px",
+            cursor: isSyncing ? "not-allowed" : "pointer",
+          }}>
+            {isSyncing ? "Syncing…" : "Sync Asana"}
+          </button>
+        </div>
+
+        {syncMsg && (
+          <div style={{
+            marginBottom: 16, padding: "10px 14px", borderRadius: 9, fontSize: 12.5,
+            background: syncMsg.startsWith("Error") ? "var(--amber-soft)" : "var(--green-soft)",
+            color: syncMsg.startsWith("Error") ? "var(--red)" : "var(--green)",
+            border: `1px solid ${syncMsg.startsWith("Error") ? "var(--amber)" : "var(--green)"}`,
+          }}>{syncMsg}</div>
+        )}
+
+        {/* 3-col grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "236px minmax(0,1fr) 270px", gap: 18, alignItems: "start" }} className="wb-grid">
+
+          {/* ── Left: projects + standup ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={cardShell}>
+              <div style={cardHeader}>
+                <span style={monoLabel}>Projects · {projects.length}</span>
+              </div>
               {projects.length === 0 ? (
-                <p style={{ padding: "14px", fontSize: 13, color: "var(--text-muted)", margin: 0 }}>Click Sync Asana to load.</p>
+                <p style={{ padding: 14, fontSize: 13, color: "var(--t4)", margin: 0 }}>Click Sync Asana to load.</p>
               ) : (
                 projects.map(p => {
                   const active = activeProject === p.asanaGid;
                   const color = getProjectColor(p.color);
                   return (
                     <button key={p.asanaGid} onClick={() => { setActiveProject(p.asanaGid); setSelectedAssignee(null); }} style={{
-                      display: "flex", alignItems: "center", gap: 8,
-                      padding: "10px 14px", background: active ? "var(--bg-soft)" : "transparent",
-                      border: "none", cursor: "pointer", textAlign: "left",
-                      borderLeft: active ? `3px solid ${color}` : "3px solid transparent",
+                      width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "10px 14px",
+                      background: active ? "var(--surface-2)" : "transparent",
+                      borderLeft: `3px solid ${active ? color : "transparent"}`,
+                      borderTop: "none", borderRight: "none", borderBottom: "none",
+                      cursor: "pointer", textAlign: "left",
                     }}>
                       <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "var(--text-1)" : "var(--text-2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {p.name}
-                      </span>
-                      <span style={{ fontSize: 11, color: "var(--text-4)", flexShrink: 0 }}>{p.tasks.length}</span>
+                      <span style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "var(--t1)" : "var(--t2)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                      <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t4)", flexShrink: 0 }}>{p.tasks.length}</span>
                     </button>
                   );
                 })
               )}
             </div>
-          </div>
 
-          {/* Standup — selected + search */}
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border-light)" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>
-                Standup · {selectedMembers.length} selected
-              </p>
-            </div>
-
-            {/* Selected members */}
-            {selectedMembers.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", borderBottom: "1px solid var(--border-light)" }}>
-                {selectedMembers.map(m => (
-                  <MemberRow key={m.asanaGid} member={m} active={true} updating={updatingMember === m.asanaGid} onToggle={() => toggleStandup(m)} />
-                ))}
+            <div style={cardShell}>
+              <div style={cardHeader}>
+                <span style={monoLabel}>Standup · {selectedMembers.length} selected</span>
               </div>
-            )}
-
-            {/* Search */}
-            <div style={{ padding: "8px 14px", borderBottom: unselectedMembers.length > 0 ? "1px solid var(--border-light)" : "none" }}>
-              <input
-                type="text"
-                placeholder="Search to add..."
-                value={standupSearch}
-                onChange={e => setStandupSearch(e.target.value)}
-                style={{
-                  width: "100%", padding: "6px 10px", borderRadius: 6,
-                  border: "1px solid var(--border)", fontSize: 12,
-                  background: "var(--bg-soft)", color: "var(--text-1)",
-                  outline: "none", boxSizing: "border-box",
-                }}
-              />
-            </div>
-
-            {/* Search results — unselected */}
-            {standupSearch && (
-              <div style={{ display: "flex", flexDirection: "column", maxHeight: 200, overflowY: "auto" }}>
-                {unselectedMembers.length === 0 ? (
-                  <p style={{ padding: "10px 14px", fontSize: 12, color: "var(--text-muted)", margin: 0 }}>No results</p>
-                ) : (
-                  unselectedMembers.map(m => (
-                    <MemberRow key={m.asanaGid} member={m} active={false} updating={updatingMember === m.asanaGid} onToggle={() => toggleStandup(m)} />
-                  ))
-                )}
+              {selectedMembers.map(m => (
+                <MemberRow key={m.asanaGid} member={m} active updating={updatingMember === m.asanaGid} onToggle={() => toggleStandup(m)} />
+              ))}
+              <div style={{ padding: "9px 14px", borderTop: selectedMembers.length ? "1px solid var(--border-soft)" : "none" }}>
+                <input
+                  type="text"
+                  placeholder="Search to add…"
+                  value={standupSearch}
+                  onChange={e => setStandupSearch(e.target.value)}
+                  style={{
+                    width: "100%", boxSizing: "border-box", padding: "7px 10px", borderRadius: 7,
+                    border: "1px solid var(--border)", fontSize: 12, background: "var(--surface-2)",
+                    color: "var(--t1)", outline: "none", fontFamily: "inherit",
+                  }}
+                />
               </div>
-            )}
-
-            <div style={{ padding: "8px 14px", borderTop: "1px solid var(--border-light)" }}>
-              <p style={{ fontSize: 11, color: "var(--text-4)", margin: 0 }}>In morning WhatsApp brief</p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Center: Task board ── */}
-        <div>
-          {selectedProject ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* Project header */}
-              <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: getProjectColor(selectedProject.color), flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-1)", margin: 0 }}>{selectedProject.name}</h2>
-                    <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "2px 0 0" }}>
-                      {filteredTasks.length} tasks{selectedAssignee ? ` · ${selectedAssignee}` : ""}
-                      {selectedProject.syncedAt ? ` · synced ${timeAgo(selectedProject.syncedAt)}` : ""}
-                    </p>
-                  </div>
-                  <a href={`https://app.asana.com/0/${selectedProject.asanaGid}`} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: 11, color: "var(--technical)", textDecoration: "none", fontWeight: 600, flexShrink: 0 }}>
-                    Open in Asana ↗
-                  </a>
+              {standupSearch && (
+                <div style={{ display: "flex", flexDirection: "column", maxHeight: 200, overflowY: "auto", borderTop: "1px solid var(--border-soft)" }}>
+                  {unselectedMembers.length === 0 ? (
+                    <p style={{ padding: "10px 14px", fontSize: 12, color: "var(--t4)", margin: 0 }}>No results</p>
+                  ) : (
+                    unselectedMembers.map(m => (
+                      <MemberRow key={m.asanaGid} member={m} active={false} updating={updatingMember === m.asanaGid} onToggle={() => toggleStandup(m)} />
+                    ))
+                  )}
                 </div>
-
-                {/* Assignee filter chips */}
-                {assignees.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-                    <button onClick={() => setSelectedAssignee(null)} style={{
-                      padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                      background: !selectedAssignee ? "var(--technical)" : "var(--bg-soft)",
-                      color: !selectedAssignee ? "#fff" : "var(--text-2)",
-                      border: `1px solid ${!selectedAssignee ? "var(--technical)" : "var(--border)"}`,
-                      cursor: "pointer",
-                    }}>All</button>
-                    {assignees.map(name => (
-                      <button key={name} onClick={() => setSelectedAssignee(name === selectedAssignee ? null : name)} style={{
-                        padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-                        background: selectedAssignee === name ? "var(--technical)" : "var(--bg-soft)",
-                        color: selectedAssignee === name ? "#fff" : "var(--text-2)",
-                        border: `1px solid ${selectedAssignee === name ? "var(--technical)" : "var(--border)"}`,
-                        cursor: "pointer",
-                      }}>{name.split(" ")[0]}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Sections */}
-              {sortedSections.length === 0 ? (
-                <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "40px 16px", textAlign: "center" }}>
-                  <p style={{ fontSize: 14, color: "var(--text-muted)", margin: 0 }}>No tasks match this filter</p>
-                </div>
-              ) : (
-                sortedSections.map(section => {
-                  const tasks = tasksBySection[section];
-                  const collapsed = collapsedSections.has(section);
-                  return (
-                    <div key={section} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-                      {/* Section header — clickable to collapse */}
-                      <button onClick={() => toggleSection(section)} style={{
-                        width: "100%", display: "flex", alignItems: "center", gap: 8,
-                        padding: "10px 14px", background: "var(--bg-soft)",
-                        border: "none", borderBottom: collapsed ? "none" : "1px solid var(--border-light)",
-                        cursor: "pointer", textAlign: "left",
-                      }}>
-                        <span style={{ fontSize: 10, color: "var(--text-4)", transition: "transform 0.15s", transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}>▼</span>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-2)", margin: 0, flex: 1 }}>{section}</p>
-                        <span style={{ fontSize: 11, color: "var(--text-4)", background: "var(--border)", borderRadius: 10, padding: "1px 7px" }}>{tasks.length}</span>
-                      </button>
-
-                      {!collapsed && (
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          {tasks.map((task, i) => (
-                            <TaskRow key={task.asanaGid} task={task} isLast={i === tasks.length - 1} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
               )}
+              <div style={{ padding: "9px 14px", borderTop: "1px solid var(--border-soft)" }}>
+                <span style={{ fontSize: 11, color: "var(--t4)" }}>In morning WhatsApp brief</span>
+              </div>
             </div>
-          ) : (
-            <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: "40px 16px", textAlign: "center" }}>
-              <p style={{ fontSize: 14, color: "var(--text-muted)", margin: 0 }}>
-                {projects.length === 0 ? "No Asana data — click Sync Asana to load." : "Select a project from the left."}
-              </p>
-            </div>
-          )}
-        </div>
+          </div>
 
-        {/* ── Right: Bot activity + capabilities ── */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border-light)" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Bot Activity</p>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
+          {/* ── Center: task board ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
+            {selectedProject ? (
+              <>
+                <div style={{ ...cardShell, padding: "15px 17px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: getProjectColor(selectedProject.color), flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-.01em", margin: 0 }}>{selectedProject.name}</h2>
+                      <p style={{ fontSize: 12, color: "var(--t4)", margin: "3px 0 0", fontFamily: MONO }}>
+                        {filteredTasks.length} tasks{selectedAssignee ? ` · ${selectedAssignee}` : ""}{selectedProject.syncedAt ? ` · synced ${timeAgo(selectedProject.syncedAt)}` : ""}
+                      </p>
+                    </div>
+                    <a href={`https://app.asana.com/0/${selectedProject.asanaGid}`} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 11.5, color: "var(--accent)", textDecoration: "none", fontWeight: 600, flexShrink: 0 }}>Open in Asana ↗</a>
+                  </div>
+                  {assignees.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 13 }}>
+                      <Chip label="All" on={!selectedAssignee} onClick={() => setSelectedAssignee(null)} />
+                      {assignees.map(name => (
+                        <Chip key={name} label={name.split(" ")[0]} on={selectedAssignee === name} onClick={() => setSelectedAssignee(name === selectedAssignee ? null : name)} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {sortedSections.length === 0 ? (
+                  <div style={{ ...cardShell, padding: "40px 16px", textAlign: "center" }}>
+                    <p style={{ fontSize: 14, color: "var(--t4)", margin: 0 }}>No tasks match this filter</p>
+                  </div>
+                ) : (
+                  sortedSections.map(section => {
+                    const tasks = tasksBySection[section];
+                    const collapsed = collapsedSections.has(section);
+                    return (
+                      <div key={section} style={cardShell}>
+                        <button onClick={() => toggleSection(section)} style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "11px 15px",
+                          background: "var(--surface-2)", border: "none",
+                          borderBottom: collapsed ? "none" : "1px solid var(--border-soft)",
+                          cursor: "pointer", textAlign: "left",
+                        }}>
+                          <span style={{ fontFamily: MONO, fontSize: 9, color: "var(--t4)", transition: "transform .15s", transform: collapsed ? "rotate(-90deg)" : "none" }}>▾</span>
+                          <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--t3)", flex: 1 }}>{section}</span>
+                          <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--t4)", background: "var(--border)", borderRadius: 10, padding: "1px 8px" }}>{tasks.length}</span>
+                        </button>
+                        {!collapsed && tasks.map((task, i) => (
+                          <TaskRow key={task.asanaGid} task={task} isLast={i === tasks.length - 1} />
+                        ))}
+                      </div>
+                    );
+                  })
+                )}
+              </>
+            ) : (
+              <div style={{ ...cardShell, padding: "40px 16px", textAlign: "center" }}>
+                <p style={{ fontSize: 14, color: "var(--t4)", margin: 0 }}>
+                  {projects.length === 0 ? "No Asana data — click Sync Asana to load." : "Select a project from the left."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* ── Right: bot activity + capabilities ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={cardShell}>
+              <div style={cardHeader}><span style={monoLabel}>Bot Activity</span></div>
               {recentEvents.length === 0 ? (
-                <p style={{ padding: 14, fontSize: 13, color: "var(--text-muted)", margin: 0 }}>No webhook events yet</p>
+                <p style={{ padding: 14, fontSize: 12.5, color: "var(--t4)", margin: 0 }}>No webhook events yet</p>
               ) : (
                 recentEvents.map(event => (
-                  <div key={event.id} style={{ padding: "10px 14px", borderBottom: "1px solid var(--border-light)" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: event.error ? "#E74C3C" : event.processed ? "#27AE60" : "#F39C12" }} />
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-1)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{event.eventType}</span>
+                  <div key={event.id} style={{ padding: "10px 14px", borderBottom: "1px solid var(--border-soft)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: event.error ? "var(--red)" : event.processed ? "var(--green)" : "var(--amber)" }} />
+                      <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 500, color: "var(--t1)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{event.eventType}</span>
+                      <span style={{ fontSize: 10.5, color: "var(--t4)", flexShrink: 0 }}>{timeAgo(event.receivedAt)}</span>
                     </div>
-                    {event.error && <p style={{ fontSize: 11, color: "#E74C3C", margin: "2px 0 0", paddingLeft: 12 }}>{event.error.slice(0, 60)}</p>}
-                    <p style={{ fontSize: 11, color: "var(--text-4)", margin: "2px 0 0", paddingLeft: 12 }}>{timeAgo(event.receivedAt)}</p>
+                    {event.error && <p style={{ fontSize: 11, color: "var(--red)", margin: "3px 0 0", paddingLeft: 13 }}>{event.error.slice(0, 60)}</p>}
                   </div>
                 ))
               )}
             </div>
-          </div>
 
-          <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border-light)" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>AI Bot</p>
-            </div>
-            <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
-              <BotCapability icon="✍️" label="Ticket Writer" desc="Expands thin descriptions on task creation" />
-              <BotCapability icon="⚠️" label="Quality Checker" desc="Flags missing fields on Ready for Dev" />
-              <BotCapability icon="📊" label="Effort Suggester" desc="S/M/L estimate on every new task" />
-              <BotCapability icon="⚡" label="Subtask Generator" desc="Breaks task into subtasks, assigns to team" />
-              <BotCapability icon="🧑‍💼" label="Morning Standup" desc="Team tasks in daily WhatsApp brief" />
-            </div>
-            <div style={{ padding: "0 14px 14px" }}>
-              <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 11, background: "var(--bg-soft)", color: "var(--text-3)" }}>
-                <strong>Webhook:</strong> <span style={{ fontFamily: "monospace", fontSize: 10 }}>/api/asana/webhook</span>
+            <div style={cardShell}>
+              <div style={cardHeader}><span style={monoLabel}>AI Bot</span></div>
+              <div style={{ padding: "13px 14px", display: "flex", flexDirection: "column", gap: 13 }}>
+                <BotCapability color="var(--accent)" label="Ticket Writer" desc="Expands thin descriptions on task creation" />
+                <BotCapability color="var(--amber)" label="Quality Checker" desc="Flags missing fields on Ready for Dev" />
+                <BotCapability color="var(--blue)" label="Effort Suggester" desc="S / M / L estimate on every new task" />
+                <BotCapability color="var(--green)" label="Subtask Generator" desc="Breaks a task into subtasks, assigns to team" />
+                <BotCapability color="var(--t3)" label="Morning Standup" desc="Team tasks in the daily WhatsApp brief" />
+              </div>
+              <div style={{ padding: "0 14px 14px" }}>
+                <div style={{ padding: "8px 12px", borderRadius: 8, background: "var(--surface-2)", fontSize: 11, color: "var(--t3)" }}>
+                  Webhook · <span style={{ fontFamily: MONO, fontSize: 10 }}>/api/asana/webhook</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 1024px) {
+          .wb-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
+  );
+}
+
+function Chip({ label, on, onClick }: { label: string; on: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 600,
+      background: on ? "var(--accent)" : "var(--surface-2)",
+      color: on ? "#fff" : "var(--t2)",
+      border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
+      cursor: "pointer",
+    }}>{label}</button>
   );
 }
 
 function MemberRow({ member, active, updating, onToggle }: { member: AsanaMember; active: boolean; updating: boolean; onToggle: () => void }) {
   return (
     <button onClick={onToggle} disabled={updating} style={{
-      display: "flex", alignItems: "center", gap: 8,
-      padding: "8px 14px", background: active ? "rgba(37,99,235,0.04)" : "transparent",
-      border: "none", cursor: "pointer", textAlign: "left",
-      opacity: updating ? 0.5 : 1,
+      width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 14px",
+      background: "transparent", border: "none", borderBottom: "1px solid var(--border-soft)",
+      cursor: "pointer", textAlign: "left", opacity: updating ? 0.5 : 1,
     }}>
       <span style={{
         width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-        border: `2px solid ${active ? "var(--technical)" : "var(--border)"}`,
-        background: active ? "var(--technical)" : "transparent",
+        background: active ? "var(--accent)" : "transparent",
+        border: active ? "none" : "2px solid var(--border)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: "#fff", fontSize: 10, fontWeight: 700, transition: "all 0.15s",
+        color: "#fff", fontSize: 10, fontWeight: 700,
       }}>{active ? "✓" : ""}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: "var(--text-1)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {member.name}
-        </p>
-        {member.email && (
-          <p style={{ fontSize: 10, color: "var(--text-4)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.email}</p>
-        )}
+        <div style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: "var(--t1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
+        {member.email && <div style={{ fontSize: 10, color: "var(--t4)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.email}</div>}
       </div>
     </button>
   );
@@ -518,72 +479,56 @@ function TaskRow({ task, isLast }: { task: AsanaTask; isLast: boolean }) {
   }
 
   return (
-    <div style={{ borderBottom: isLast ? "none" : "1px solid var(--border-light)" }}>
+    <div style={{ borderBottom: isLast ? "none" : "1px solid var(--border-soft)" }}>
       <button onClick={() => setExpanded(e => !e)} style={{
-        width: "100%", display: "flex", alignItems: "flex-start", gap: 10,
-        padding: "10px 14px", background: "transparent",
-        border: "none", cursor: "pointer", textAlign: "left",
+        width: "100%", display: "flex", alignItems: "flex-start", gap: 11, padding: "11px 15px",
+        background: "transparent", border: "none", cursor: "pointer", textAlign: "left",
       }}>
-        <span style={{ width: 16, height: 16, borderRadius: "50%", flexShrink: 0, marginTop: 2, border: "2px solid var(--border)", background: "transparent" }} />
+        <span style={{ width: 15, height: 15, borderRadius: "50%", flexShrink: 0, marginTop: 1, border: "2px solid var(--border)" }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text-1)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: expanded ? "normal" : "nowrap" }}>
-            {task.name}
-            {task.isModifiedByBot && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--technical)", fontWeight: 600 }}>🤖</span>}
-          </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
-            {task.assigneeName && <span style={{ fontSize: 11, color: "var(--text-4)" }}>{task.assigneeName}</span>}
-            {task.dueOn && (
-              <span style={{ fontSize: 11, fontWeight: 600, color: isOverdue ? "#E74C3C" : "var(--text-4)" }}>
-                {isOverdue ? "⚠ " : ""}{task.dueOn}
-              </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--t1)", lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: expanded ? "normal" : "nowrap" }}>{task.name}</span>
+            {task.isModifiedByBot && (
+              <span style={{ fontFamily: MONO, fontSize: 8.5, fontWeight: 600, letterSpacing: ".08em", color: "var(--accent)", background: "var(--accent-soft)", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>BOT</span>
             )}
           </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 3, flexWrap: "wrap" }}>
+            {task.assigneeName && <span style={{ fontSize: 11, color: "var(--t4)" }}>{task.assigneeName}</span>}
+            {task.dueOn && <span style={{ fontSize: 11, fontWeight: 600, color: isOverdue ? "var(--amber)" : "var(--t4)" }}>{task.dueOn}</span>}
+          </div>
         </div>
-        <span style={{ fontSize: 10, color: "var(--text-4)", flexShrink: 0, marginTop: 3 }}>{expanded ? "▲" : "▼"}</span>
+        <span style={{ fontFamily: MONO, fontSize: 9, color: "var(--t4)", flexShrink: 0, marginTop: 3, transform: expanded ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▾</span>
       </button>
 
       {expanded && (
-        <div style={{ padding: "0 14px 14px 40px", fontSize: 12, color: "var(--text-2)", lineHeight: 1.7, background: "var(--bg-soft)" }}>
+        <div style={{ padding: "0 15px 14px 41px", fontSize: 12, color: "var(--t2)", lineHeight: 1.7, background: "var(--surface-2)" }}>
           {task.notes ? (
-            <div style={{ whiteSpace: "pre-wrap", marginBottom: 10 }}>
-              {task.notes.slice(0, 600)}{task.notes.length > 600 && "…"}
-            </div>
+            <div style={{ whiteSpace: "pre-wrap", marginBottom: 10, paddingTop: 10 }}>{task.notes.slice(0, 600)}{task.notes.length > 600 && "…"}</div>
           ) : (
-            <div style={{ color: "var(--text-muted)", fontStyle: "italic", marginBottom: 10 }}>No description</div>
+            <div style={{ color: "var(--t4)", fontStyle: "italic", marginBottom: 10, paddingTop: 10 }}>No description</div>
           )}
-
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <a href={task.permalink ?? `https://app.asana.com/0/0/${task.asanaGid}`} target="_blank" rel="noopener noreferrer"
-              style={{ color: "var(--technical)", textDecoration: "none", fontWeight: 600, fontSize: 11 }}>
-              Open in Asana ↗
-            </a>
+              style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 600, fontSize: 11 }}>Open in Asana ↗</a>
             <button onClick={generateSubtasks} disabled={generatingSubtasks} style={{
               padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-              background: generatingSubtasks ? "var(--bg-soft)" : "var(--technical)",
-              color: generatingSubtasks ? "var(--text-3)" : "#fff",
+              background: generatingSubtasks ? "var(--surface-2)" : "var(--accent)",
+              color: generatingSubtasks ? "var(--t3)" : "#fff",
               border: "none", cursor: generatingSubtasks ? "not-allowed" : "pointer",
-            }}>
-              {generatingSubtasks ? "Generating…" : "⚡ Generate Subtasks"}
-            </button>
+            }}>{generatingSubtasks ? "Generating…" : "Generate subtasks"}</button>
           </div>
-
           {subtaskError && (
-            <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "#FFF5F5", color: "#C0392B", fontSize: 12 }}>
-              Error: {subtaskError}
-            </div>
+            <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 8, background: "var(--amber-soft)", color: "var(--red)", fontSize: 12 }}>Error: {subtaskError}</div>
           )}
-
           {subtaskResult && (
             <div style={{ marginTop: 10 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 6px" }}>
-                {subtaskResult.length} subtasks created ✓
-              </p>
+              <p style={{ ...monoLabel, margin: "0 0 6px" }}>{subtaskResult.length} subtasks created</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {subtaskResult.map((s, i) => (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6, background: "var(--bg-card)", border: "1px solid var(--border)" }}>
-                    <span style={{ fontSize: 10, color: "var(--text-4)", flexShrink: 0 }}>{i + 1}</span>
-                    <span style={{ fontSize: 12, color: "var(--text-1)", flex: 1 }}>{s.title}</span>
-                    <span style={{ fontSize: 11, color: "var(--technical)", fontWeight: 600, flexShrink: 0 }}>→ {s.assignee}</span>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6, background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t4)", flexShrink: 0, ...tnum }}>{String(i + 1).padStart(2, "0")}</span>
+                    <span style={{ fontSize: 12, color: "var(--t1)", flex: 1 }}>{s.title}</span>
+                    <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 600, flexShrink: 0 }}>→ {s.assignee}</span>
                   </div>
                 ))}
               </div>
@@ -595,13 +540,13 @@ function TaskRow({ task, isLast }: { task: AsanaTask; isLast: boolean }) {
   );
 }
 
-function BotCapability({ icon, label, desc }: { icon: string; label: string; desc: string }) {
+function BotCapability({ color, label, desc }: { color: string; label: string; desc: string }) {
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-      <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0, marginTop: 4 }} />
       <div>
-        <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>{label}</p>
-        <p style={{ fontSize: 11, color: "var(--text-3)", margin: "2px 0 0" }}>{desc}</p>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--t1)" }}>{label}</div>
+        <div style={{ fontSize: 11, color: "var(--t3)", marginTop: 2, lineHeight: 1.4 }}>{desc}</div>
       </div>
     </div>
   );
