@@ -313,28 +313,32 @@ export default function RoadmapBoard({
         </div>
       </div>
 
-      {/* Aggregated Now/Next/Later swimlane (replaces month timeline) */}
+      {/* In Motion Now — grouped by theme, NOW items only */}
       <div style={{ ...CARD, marginBottom: 24 }}>
-        <div style={{ ...LABEL, marginBottom: 4 }}>All Themes — Now / Next / Later</div>
-        <p style={{ fontSize: 11.5, color: "var(--text-4)", margin: "0 0 16px" }}>Every theme&rsquo;s work flattened into one board. Color dot = theme.</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }} className="roadmap-phases">
-          {(["now", "next", "later"] as const).map((phase, pi) => {
-            const accent = pi === 0 ? "var(--warn)" : pi === 1 ? "var(--c-technical)" : "var(--text-4)";
-            const rows = THEMES.flatMap(theme => theme[phase].map(it => ({ it, theme })));
+        <div style={{ ...LABEL, marginBottom: 4 }}>In Motion Now</div>
+        <p style={{ fontSize: 11.5, color: "var(--text-4)", margin: "0 0 18px" }}>What&rsquo;s actively in progress across every theme. (Next &amp; Later live in each theme card.)</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "18px 28px" }}>
+          {THEMES.map(theme => {
+            const nowItems = theme.now;
+            if (nowItems.length === 0) return null;
+            const c = STATUS_COLOR[theme.status];
             return (
-              <div key={phase}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                  <span style={{ width: 14, height: 2, background: accent, borderRadius: 2 }} />
-                  <span style={{ ...LABEL, color: accent }}>{phase}</span>
-                  <span style={{ fontSize: 10, color: "var(--text-4)", marginLeft: "auto", ...MONO }}>{rows.length}</span>
+              <div key={theme.id}>
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 9 }}>
+                  <span style={{ fontSize: 13 }}>{theme.emoji}</span>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--text-1)" }}>{theme.name}</span>
+                  <Dot color={c} size={6} />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                  {rows.map(({ it, theme }, i) => (
-                    <div key={i} style={{ display: "flex", gap: 7, alignItems: "flex-start" }}>
-                      <span title={theme.name} style={{ marginTop: 4, flexShrink: 0 }}><Dot color={STATUS_COLOR[theme.status]} size={6} /></span>
-                      <span style={{ fontSize: 11.5, lineHeight: 1.4, color: it.state === "todo" ? "var(--text-3)" : "var(--text-1)", fontWeight: it.state === "in_progress" ? 600 : 400 }}>{it.label}</span>
-                    </div>
-                  ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingLeft: 2 }}>
+                  {nowItems.map((it, i) => {
+                    const m = ITEM_MARK[it.state];
+                    return (
+                      <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                        <span style={{ color: m.color, fontSize: 10, lineHeight: "17px", flexShrink: 0 }}>{m.mark}</span>
+                        <span style={{ fontSize: 12, lineHeight: 1.4, color: it.state === "todo" ? "var(--text-3)" : "var(--text-1)", fontWeight: it.state === "in_progress" ? 600 : 400 }}>{it.label}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
