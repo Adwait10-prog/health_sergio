@@ -152,8 +152,8 @@ export default function RoadmapBoard({
                       <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 9 }}>
                         {b.now.map((n, j) => (
                           <div key={j} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                            <span style={{ marginTop: 6 }}><Dot color={c} size={5} /></span>
-                            <span style={{ fontSize: 12.5, color: "var(--t1)", lineHeight: 1.45 }}>{n.label}</span>
+                            <span style={{ display: "flex", alignItems: "center", height: 18, flexShrink: 0 }}><Dot color={c} size={5} /></span>
+                            <span style={{ fontSize: 12.5, color: "var(--t1)", lineHeight: "18px" }}>{n.label}</span>
                           </div>
                         ))}
                       </div>
@@ -337,8 +337,8 @@ export default function RoadmapBoard({
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
                 {CTO_COMMENTARY.next60.map((n, i) => (
                   <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                    <span style={{ marginTop: 6 }}><Dot color="var(--accent)" size={5} /></span>
-                    <span style={{ fontSize: 12.5, color: "var(--t1)", lineHeight: 1.45 }}>{n}</span>
+                    <span style={{ display: "flex", alignItems: "center", height: 18, flexShrink: 0 }}><Dot color="var(--accent)" size={5} /></span>
+                    <span style={{ fontSize: 12.5, color: "var(--t1)", lineHeight: "18px" }}>{n}</span>
                   </div>
                 ))}
               </div>
