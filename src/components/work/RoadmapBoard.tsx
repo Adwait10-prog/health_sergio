@@ -8,6 +8,7 @@ import {
   type RoadmapTheme, type ThemeStatus, type ItemState, type RndStage,
 } from "@/lib/roadmapData";
 import { DASHBOARD_TOKENS, MONO, tnum, softFill } from "./dashboardTokens";
+import CeoUpdateButton from "./CeoUpdateButton";
 
 // ── status / stage → color ──────────────────────────────────────────────────
 const STATUS_COLOR: Record<ThemeStatus, string> = {
@@ -98,7 +99,8 @@ export default function RoadmapBoard({
               Live · grounded against Asana · {new Date(generatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <CeoUpdateButton />
             <a href="/work/analysis" style={navPill}>Media analysis →</a>
             <a href="/work" style={navPill}>← Work board</a>
           </div>
