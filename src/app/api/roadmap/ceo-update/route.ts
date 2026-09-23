@@ -4,21 +4,9 @@ import { THEMES, RND_TRACKS, RISK_REGISTER } from "@/lib/roadmapData";
 import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
+import { stripMarkdown } from "@/lib/text";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-
-// Belt-and-suspenders: strip any residual markdown so output is always clean plain text.
-function stripMarkdown(s: string): string {
-  return s
-    .replace(/\*\*(.+?)\*\*/g, "$1")        // **bold**
-    .replace(/(^|[^*])\*(?!\s)(.+?)\*/g, "$1$2") // *italic* (not bullet stars)
-    .replace(/`{1,3}([^`]+)`{1,3}/g, "$1")  // `code`
-    .replace(/^#{1,6}\s+/gm, "")            // # headers
-    .replace(/^\s*[-*]{3,}\s*$/gm, "")      // --- / *** horizontal rules
-    .replace(/—/g, ",")                 // em dash → comma (house style)
-    .replace(/\n{3,}/g, "\n\n")             // collapse extra blank lines
-    .trim();
-}
 
 function loadKnowledge(...filenames: string[]): string {
   return filenames

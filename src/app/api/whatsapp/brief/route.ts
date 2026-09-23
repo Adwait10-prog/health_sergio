@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasBearer } from "@/lib/auth";
-import twilio from "twilio";
+import { sendWhatsApp } from "@/lib/wa/twilio";
 import {
   fetchBriefData,
   generateMorningBrief,
@@ -9,12 +9,6 @@ import {
   isSundayIST,
 } from "@/lib/briefData";
 
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID!,
-  process.env.TWILIO_AUTH_TOKEN!
-);
-
-const WHATSAPP_FROM = "whatsapp:+14155238886";
 const USER_WHATSAPP = process.env.USER_WHATSAPP!;
 
 export async function GET(req: NextRequest) {
@@ -38,11 +32,7 @@ export async function GET(req: NextRequest) {
       console.log("Morning brief sent:", message.length, "chars");
     }
 
-    await twilioClient.messages.create({
-      from: WHATSAPP_FROM,
-      to: USER_WHATSAPP,
-      body: message,
-    });
+    await sendWhatsApp(USER_WHATSAPP, message);
 
     return NextResponse.json({ ok: true, sunday: isSundayIST(), preview: message.slice(0, 100) });
   } catch (e) {

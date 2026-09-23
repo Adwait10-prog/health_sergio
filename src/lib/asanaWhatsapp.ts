@@ -95,7 +95,7 @@ function loadKnowledge(...filenames: string[]): string {
     .join("\n\n---\n\n");
 }
 
-function resolveProject(hint: string | null): { gid: string; name: string } | null {
+export function resolveProject(hint: string | null): { gid: string; name: string } | null {
   if (!hint) return null;
   const normalized = hint.toLowerCase().trim();
 
@@ -244,7 +244,7 @@ export async function createAsanaTaskFromWhatsApp(params: {
   assigneeHint: string | null;
   phone: string;
   skipPendingCheck?: boolean;
-}): Promise<{ message: string }> {
+}): Promise<{ message: string; created: boolean }> {
   const { taskTitle, taskDescription, projectHint, sectionHint, assigneeHint, phone, skipPendingCheck } = params;
 
   // Resolve project
@@ -273,11 +273,12 @@ export async function createAsanaTaskFromWhatsApp(params: {
 
     return {
       message: `Got it! Which project should this go into?\n\n• ${projectList}\n\nJust reply with the project name.`,
+      created: false,
     };
   }
 
   if (!project) {
-    return { message: "Couldn't match a project — try again with the exact project name (e.g. 'Core Engineering')." };
+    return { message: "Couldn't match a project — try again with the exact project name (e.g. 'Core Engineering').", created: false };
   }
 
   // Resolve section
@@ -357,5 +358,6 @@ export async function createAsanaTaskFromWhatsApp(params: {
 
   return {
     message: `✅ Asana ticket created in ${project.name}${sectionNote}${assigneeNote}!\n\n"${title}"${link}\n\nBot ${taskDescription.trim().length >= 120 ? "structured" : "expanded"} the description using Rian context 🤖`,
+    created: true,
   };
 }
