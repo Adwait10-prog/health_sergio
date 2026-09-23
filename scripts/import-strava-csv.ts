@@ -84,10 +84,13 @@ async function main() {
     const type = normType((get(r, "Activity Type") ?? "").trim());
     types.set(type, (types.get(type) ?? 0) + 1);
 
-    let distanceM = num(getD(r, "Distance"));
-    const distKm = num(get(r, "Distance", 0));
-    if (distanceM != null && distKm != null && distanceM < distKm * 100) distanceM = distKm * 1000; // 2nd col was km after all
-    if (distanceM == null && distKm != null) distanceM = distKm * 1000;
+    // The detailed (2nd) Distance column is always metres. The summary (1st) column is km for
+    // most sports but METRES for swims, so only fall back to it when the detailed one is empty.
+    let distanceM = num(get(r, "Distance", 1));
+    if (distanceM == null) {
+      const summary = num(get(r, "Distance", 0));
+      if (summary != null) distanceM = type === "Swim" ? summary : summary * 1000;
+    }
 
     const description = (get(r, "Activity Description") ?? "").trim();
     const raw = Object.fromEntries(header.map((h, i) => [h.trim() + (pos[h.trim()].indexOf(i) ? `_${pos[h.trim()].indexOf(i) + 1}` : ""), r[i]]));
