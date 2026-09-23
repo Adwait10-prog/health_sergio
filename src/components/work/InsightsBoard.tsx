@@ -126,12 +126,12 @@ function ProjectCard({ project }: { project: ProjectRow }) {
       {/* Overdue + completed */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {project.overdueCount > 0 && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#E74C3C" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--act)" }}>
             {project.overdueCount} overdue
           </span>
         )}
         {project.completedLast7Days > 0 && (
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)" }}>
             +{project.completedLast7Days} done (7d)
           </span>
         )}
@@ -165,7 +165,7 @@ function AssigneeRow({
 }) {
   const ageColor =
     row.avgAgeDays > 14
-      ? "#E74C3C"
+      ? "var(--act)"
       : row.avgAgeDays > 7
       ? "var(--warn)"
       : "var(--text-2)";
@@ -205,7 +205,7 @@ function AssigneeRow({
         style={{
           fontSize: 13,
           fontWeight: row.overdueCount > 0 ? 600 : 400,
-          color: row.overdueCount > 0 ? "#E74C3C" : "var(--text-4)",
+          color: row.overdueCount > 0 ? "var(--act)" : "var(--text-4)",
           textAlign: "right",
         }}
       >
@@ -352,12 +352,12 @@ export default function InsightsBoard({ data }: { data: InsightsData }) {
           <StatChip
             label="Events processed"
             value={botStats.eventsProcessed}
-            valueColor="var(--accent)"
+            valueColor="var(--ink)"
           />
           <StatChip
             label="Errors"
             value={botStats.eventsErrored}
-            valueColor={botStats.eventsErrored > 0 ? "#E74C3C" : "var(--text-3)"}
+            valueColor={botStats.eventsErrored > 0 ? "var(--act)" : "var(--text-3)"}
           />
         </div>
       </section>

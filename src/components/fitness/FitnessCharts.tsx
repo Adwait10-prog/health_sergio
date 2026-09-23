@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { istDayLabel } from "@/lib/date";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -264,16 +264,31 @@ function RecentRunsTable({ runs }: { runs: Activity[] }) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────
-export default function FitnessCharts({ activities, weekBuckets, currentWeekKm, currentWeekTargetKm }: Props) {
-  const runs = useMemo(() => activities.filter(a => a.type === "Run" || a.type === "TrailRun"), [activities]);
+// Start of a calendar year in IST, as an instant
+const yearStartIST = (y: number) => Date.UTC(y, 0, 1) - 5.5 * 3600000;
+
+export default function FitnessCharts({ activities: allActivities, weekBuckets, currentWeekKm, currentWeekTargetKm }: Props) {
+  const year = new Date(Date.now() + 5.5 * 3600000).getUTCFullYear();
+  const [scope, setScope] = useState<"year" | "all">("year");
+  const activities = useMemo(
+    () => scope === "all" ? allActivities : allActivities.filter(a => new Date(a.date).getTime() >= yearStartIST(year)),
+    [allActivities, scope, year],
+  );
+  const isRun = (a: { type: string }) => a.type === "Run" || a.type === "TrailRun";
+  const runs = useMemo(() => activities.filter(isRun), [activities]);
+  const allRunKm = useMemo(() => allActivities.filter(isRun).reduce((s, r) => s + (r.distanceM ?? 0) / 1000, 0), [allActivities]);
   const totalRunKm = useMemo(() => runs.reduce((s, r) => s + (r.distanceM ?? 0) / 1000, 0), [runs]);
   const totalRunTime = useMemo(() => runs.reduce((s, r) => s + (r.movingTimeSec ?? 0), 0), [runs]);
+  const allKm = useMemo(() => activities.reduce((s, a) => s + (a.distanceM ?? 0) / 1000, 0), [activities]);
+  const allTime = useMemo(() => activities.reduce((s, a) => s + (a.movingTimeSec ?? 0), 0), [activities]);
+  const longest = runs.reduce((m, r) => Math.max(m, (r.distanceM ?? 0) / 1000), 0);
   const avgRunKm = runs.length > 0 ? totalRunKm / runs.length : 0;
   const avgPaceRuns = runs.filter(r => r.avgSpeedMps && r.avgSpeedMps > 0);
   const avgSpeed = avgPaceRuns.length > 0
     ? avgPaceRuns.reduce((s, r) => s + r.avgSpeedMps!, 0) / avgPaceRuns.length
     : 0;
   const elevationTotal = runs.reduce((s, r) => s + (r.totalElevationM ?? 0), 0);
+  const label = scope === "year" ? String(year) : "all time";
 
   const card: React.CSSProperties = {
     background: "var(--surface)", borderRadius: "var(--radius)",
@@ -283,13 +298,25 @@ export default function FitnessCharts({ activities, weekBuckets, currentWeekKm, 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* ── Run summary stats ── */}
+      {/* ── Summary: this year by default, all time on the toggle ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span className="eyebrow">Summary · {label}</span>
+        <span style={{ display: "flex", gap: 4 }}>
+          {(["year", "all"] as const).map(k => (
+            <button key={k} className={`btn sm${scope === k ? " primary" : ""}`} onClick={() => setScope(k)}>
+              {k === "year" ? year : "All time"}
+            </button>
+          ))}
+        </span>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
         {[
-          { label: "Total runs", value: `${runs.length}`, sub: "synced from Strava", color: "var(--ink)" },
-          { label: "Total km", value: `${totalRunKm.toFixed(1)}`, sub: "all time", color: "var(--ink)" },
+          { label: "Runs", value: `${runs.length}`, sub: `longest ${longest.toFixed(1)} km`, color: "var(--ink)" },
+          { label: "Run km", value: `${totalRunKm.toFixed(1)}`, sub: scope === "year" ? `${allRunKm.toFixed(0)} km all time` : "all time", color: "var(--ink)" },
           { label: "Avg pace", value: avgSpeed > 0 ? formatPace(avgSpeed) : "—", sub: "min / km", color: "var(--text-1)" },
           { label: "Avg distance", value: `${avgRunKm.toFixed(1)} km`, sub: "per run", color: "var(--text-1)" },
+          { label: "All activities", value: `${activities.length}`, sub: `${allKm.toFixed(0)} km · run, walk, ride, swim`, color: "var(--text-1)" },
+          { label: "Moving time", value: `${Math.round(allTime / 3600)}h`, sub: `${Math.round(totalRunTime / 3600)}h running`, color: "var(--text-1)" },
         ].map(s => (
           <div key={s.label} className="statbox">
             <span className="eyebrow">{s.label}</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { DASHBOARD_TOKENS, MONO, tnum } from "./dashboardTokens";
+import { MONO, tnum } from "./dashboardTokens";
 
 interface AsanaTask {
   id: string;
@@ -201,7 +201,7 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
   }
 
   return (
-    <div style={{ ...DASHBOARD_TOKENS, padding: "28px 36px 72px" }}>
+    <div className="main">
       <div>
 
         {/* Header */}
@@ -218,8 +218,8 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
             </p>
           </div>
           <button onClick={runSync} disabled={isSyncing} style={{
-            fontSize: 12.5, fontWeight: 600, color: "#fff",
-            background: isSyncing ? "var(--t4)" : "var(--accent)",
+            fontSize: 12.5, fontWeight: 600, color: "var(--bg)",
+            background: isSyncing ? "var(--t4)" : "var(--ink)",
             border: "none", borderRadius: 9, padding: "9px 16px",
             cursor: isSyncing ? "not-allowed" : "pointer",
           }}>
@@ -319,7 +319,7 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
                       </p>
                     </div>
                     <a href={`https://app.asana.com/0/${selectedProject.asanaGid}`} target="_blank" rel="noopener noreferrer"
-                      style={{ fontSize: 11.5, color: "var(--accent)", textDecoration: "none", fontWeight: 600, flexShrink: 0 }}>Open in Asana ↗</a>
+                      style={{ fontSize: 11.5, color: "var(--ink)", textDecoration: "none", fontWeight: 600, flexShrink: 0 }}>Open in Asana ↗</a>
                   </div>
                   {assignees.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 13 }}>
@@ -391,7 +391,7 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
             <div style={cardShell}>
               <div style={cardHeader}><span style={monoLabel}>AI Bot</span></div>
               <div style={{ padding: "13px 14px", display: "flex", flexDirection: "column", gap: 13 }}>
-                <BotCapability color="var(--accent)" label="Ticket Writer" desc="Expands thin descriptions on task creation" />
+                <BotCapability color="var(--ink)" label="Ticket Writer" desc="Expands thin descriptions on task creation" />
                 <BotCapability color="var(--amber)" label="Quality Checker" desc="Flags missing fields on Ready for Dev" />
                 <BotCapability color="var(--blue)" label="Effort Suggester" desc="S / M / L estimate on every new task" />
                 <BotCapability color="var(--green)" label="Subtask Generator" desc="Breaks a task into subtasks, assigns to team" />
@@ -420,9 +420,9 @@ function Chip({ label, on, onClick }: { label: string; on: boolean; onClick: () 
   return (
     <button onClick={onClick} style={{
       padding: "4px 11px", borderRadius: 20, fontSize: 11.5, fontWeight: 600,
-      background: on ? "var(--accent)" : "var(--surface-2)",
-      color: on ? "#fff" : "var(--t2)",
-      border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
+      background: on ? "var(--ink)" : "var(--surface-2)",
+      color: on ? "var(--bg)" : "var(--t2)",
+      border: `1px solid ${on ? "var(--ink)" : "var(--border)"}`,
       cursor: "pointer",
     }}>{label}</button>
   );
@@ -437,10 +437,10 @@ function MemberRow({ member, active, updating, onToggle }: { member: AsanaMember
     }}>
       <span style={{
         width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-        background: active ? "var(--accent)" : "transparent",
+        background: active ? "var(--ink)" : "transparent",
         border: active ? "none" : "2px solid var(--border)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: "#fff", fontSize: 10, fontWeight: 700,
+        color: "var(--bg)", fontSize: 10, fontWeight: 700,
       }}>{active ? "✓" : ""}</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: active ? 600 : 400, color: "var(--t1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{member.name}</div>
@@ -489,7 +489,7 @@ function TaskRow({ task, isLast }: { task: AsanaTask; isLast: boolean }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: "var(--t1)", lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: expanded ? "normal" : "nowrap" }}>{task.name}</span>
             {task.isModifiedByBot && (
-              <span style={{ fontFamily: MONO, fontSize: 8.5, fontWeight: 600, letterSpacing: ".08em", color: "var(--accent)", background: "var(--accent-soft)", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>BOT</span>
+              <span style={{ fontFamily: MONO, fontSize: 8.5, fontWeight: 600, letterSpacing: ".08em", color: "var(--info)", background: "var(--info-soft)", borderRadius: 4, padding: "1px 5px", flexShrink: 0 }}>BOT</span>
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginTop: 3, flexWrap: "wrap" }}>
@@ -509,11 +509,11 @@ function TaskRow({ task, isLast }: { task: AsanaTask; isLast: boolean }) {
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <a href={task.permalink ?? `https://app.asana.com/0/0/${task.asanaGid}`} target="_blank" rel="noopener noreferrer"
-              style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 600, fontSize: 11 }}>Open in Asana ↗</a>
+              style={{ color: "var(--ink)", textDecoration: "none", fontWeight: 600, fontSize: 11 }}>Open in Asana ↗</a>
             <button onClick={generateSubtasks} disabled={generatingSubtasks} style={{
               padding: "4px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600,
-              background: generatingSubtasks ? "var(--surface-2)" : "var(--accent)",
-              color: generatingSubtasks ? "var(--t3)" : "#fff",
+              background: generatingSubtasks ? "var(--surface-2)" : "var(--ink)",
+              color: generatingSubtasks ? "var(--t3)" : "var(--bg)",
               border: "none", cursor: generatingSubtasks ? "not-allowed" : "pointer",
             }}>{generatingSubtasks ? "Generating…" : "Generate subtasks"}</button>
           </div>
@@ -528,7 +528,7 @@ function TaskRow({ task, isLast }: { task: AsanaTask; isLast: boolean }) {
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6, background: "var(--surface)", border: "1px solid var(--border)" }}>
                     <span style={{ fontFamily: MONO, fontSize: 10, color: "var(--t4)", flexShrink: 0, ...tnum }}>{String(i + 1).padStart(2, "0")}</span>
                     <span style={{ fontSize: 12, color: "var(--t1)", flex: 1 }}>{s.title}</span>
-                    <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 600, flexShrink: 0 }}>→ {s.assignee}</span>
+                    <span style={{ fontSize: 11, color: "var(--ink)", fontWeight: 600, flexShrink: 0 }}>→ {s.assignee}</span>
                   </div>
                 ))}
               </div>

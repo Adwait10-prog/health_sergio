@@ -7,7 +7,7 @@ import {
   RND_THESIS, RND_TRACKS, RND_STAGE_ORDER, RND_STAGE_LABEL,
   type RoadmapTheme, type ThemeStatus, type ItemState, type RndStage,
 } from "@/lib/roadmapData";
-import { DASHBOARD_TOKENS, MONO, tnum, softFill } from "./dashboardTokens";
+import { MONO, tnum, softFill } from "./dashboardTokens";
 import CeoUpdateButton from "./CeoUpdateButton";
 
 // ── status / stage → color ──────────────────────────────────────────────────
@@ -19,16 +19,16 @@ const STATUS_LABEL: Record<ThemeStatus, string> = {
 };
 const ITEM_MARK: Record<ItemState, { mark: string; color: string }> = {
   done: { mark: "✓", color: "var(--green)" },
-  in_progress: { mark: "●", color: "var(--accent)" },
+  in_progress: { mark: "●", color: "var(--ink)" },
   todo: { mark: "○", color: "var(--t4)" },
 };
 const STAGE_COLOR: Record<RndStage, string> = {
-  exploring: "var(--t4)", validating: "var(--blue)", productizing: "var(--accent)", graduated: "var(--green)",
+  exploring: "var(--t4)", validating: "var(--blue)", productizing: "var(--ink)", graduated: "var(--green)",
 };
 
 // ── shared bits ─────────────────────────────────────────────────────────────
 const card: React.CSSProperties = {
-  background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14,
+  background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r)",
   padding: 22, boxShadow: "var(--shadow-sm)",
 };
 const eyebrow: React.CSSProperties = {
@@ -77,7 +77,7 @@ export default function RoadmapBoard({
   const highRisks = RISK_REGISTER.high.length;
 
   const kpis = [
-    { value: `${portfolioPct}%`, label: "Portfolio Progress", sub: `avg · ${THEMES.length} themes`, bar: "var(--accent)" },
+    { value: `${portfolioPct}%`, label: "Portfolio Progress", sub: `avg · ${THEMES.length} themes`, bar: "var(--ink)" },
     { value: String(totalTickets), label: "Tracked Tickets", sub: "live from Asana", bar: "var(--t3)" },
     { value: String(inFlight), label: "In Flight", sub: "matched to themes", bar: "var(--blue)" },
     { value: String(weekTotal), label: "Due This Week", sub: `${overdue} overdue`, bar: "var(--amber)" },
@@ -86,13 +86,13 @@ export default function RoadmapBoard({
   ];
 
   return (
-    <div style={{ ...DASHBOARD_TOKENS, padding: "32px 40px 80px" }}>
+    <div className="main">
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
           <div>
-            <div style={{ ...eyebrow, letterSpacing: ".16em", color: "var(--accent)", marginBottom: 11 }}>CTO Dashboard · Q3–Q4 2026</div>
+            <div style={{ ...eyebrow, letterSpacing: ".16em", color: "var(--ink-4)", marginBottom: 11 }}>CTO Dashboard · Q3–Q4 2026</div>
             <h1 style={{ fontSize: 33, fontWeight: 700, letterSpacing: "-.025em", margin: 0, lineHeight: 1.04 }}>Rian Technology Roadmap</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 13, fontSize: 12.5, color: "var(--t3)" }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", boxShadow: "0 0 0 3px var(--green-soft)" }} />
@@ -223,7 +223,7 @@ export default function RoadmapBoard({
                   {triage.map((t, i) => (
                     <a key={i} href={t.permalink ?? "#"} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", padding: "7px 9px", borderRadius: 7, background: i % 2 ? "transparent" : "var(--surface-2)" }}>
                       <span style={{ fontSize: 12, color: "var(--t1)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
-                      <span style={{ fontSize: 9.5, fontWeight: 600, color: "var(--accent)", background: "var(--accent-soft)", borderRadius: 20, padding: "2px 8px", whiteSpace: "nowrap" }}>{t.project}</span>
+                      <span style={{ fontSize: 9.5, fontWeight: 600, color: "var(--info)", background: "var(--info-soft)", borderRadius: 20, padding: "2px 8px", whiteSpace: "nowrap" }}>{t.project}</span>
                     </a>
                   ))}
                 </div>
@@ -267,7 +267,7 @@ export default function RoadmapBoard({
               <div style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: 10 }}>
                 {PRIORITIES.map((label, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                    <span style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, background: i < 2 ? "var(--accent)" : "var(--surface-2)", color: i < 2 ? "#fff" : "var(--t3)", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", ...tnum }}>{i + 1}</span>
+                    <span style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, background: i < 2 ? "var(--ink)" : "var(--surface-2)", color: i < 2 ? "#fff" : "var(--t3)", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", ...tnum }}>{i + 1}</span>
                     <span style={{ fontSize: 12.5, color: "var(--t1)", fontWeight: i < 2 ? 600 : 400, lineHeight: 1.35 }}>{label}</span>
                   </div>
                 ))}
@@ -339,12 +339,12 @@ export default function RoadmapBoard({
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
                 {CTO_COMMENTARY.next60.map((n, i) => (
                   <div key={i} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                    <span style={{ display: "flex", alignItems: "center", height: 18, flexShrink: 0 }}><Dot color="var(--accent)" size={5} /></span>
+                    <span style={{ display: "flex", alignItems: "center", height: 18, flexShrink: 0 }}><Dot color="var(--ink)" size={5} /></span>
                     <span style={{ fontSize: 12.5, color: "var(--t1)", lineHeight: "18px" }}>{n}</span>
                   </div>
                 ))}
               </div>
-              <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--accent)", fontWeight: 500, borderLeft: "3px solid var(--accent)", paddingLeft: 14, lineHeight: 1.55 }}>&ldquo;{CTO_COMMENTARY.mantra}&rdquo;</div>
+              <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--ink)", fontWeight: 500, borderLeft: "3px solid var(--ink)", paddingLeft: 14, lineHeight: 1.55 }}>&ldquo;{CTO_COMMENTARY.mantra}&rdquo;</div>
             </div>
           </div>
         </div>
@@ -397,7 +397,7 @@ function FlagshipCard({ theme, stats }: { theme: RoadmapTheme; stats?: ThemeLive
 
       {/* Now / Next / Later */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 22 }} className="rm-nnl">
-        {([["Now", theme.now, "var(--amber)"], ["Next", theme.next, "var(--accent)"], ["Later", theme.later, "var(--t4)"]] as const).map(([title, items, accent]) => (
+        {([["Now", theme.now, "var(--amber)"], ["Next", theme.next, "var(--ink)"], ["Later", theme.later, "var(--t4)"]] as const).map(([title, items, accent]) => (
           <div key={title}>
             <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 11 }}>
               <span style={{ width: 16, height: 2, borderRadius: 2, background: accent }} />

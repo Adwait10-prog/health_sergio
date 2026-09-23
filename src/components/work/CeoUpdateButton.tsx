@@ -40,7 +40,7 @@ export default function CeoUpdateButton() {
   return (
     <>
       <button onClick={generate} style={{
-        fontSize: 12.5, fontWeight: 600, color: "#fff", background: "var(--accent)",
+        fontSize: 12.5, fontWeight: 600, color: "var(--bg)", background: "var(--ink)",
         border: "none", borderRadius: 9, padding: "9px 14px", cursor: "pointer", whiteSpace: "nowrap",
       }}>Generate CEO update</button>
 
@@ -63,7 +63,7 @@ export default function CeoUpdateButton() {
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "18px 22px", borderBottom: "1px solid var(--border-soft)" }}>
               <div>
-                <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 600, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 4 }}>Weekly CTO → CEO Update</div>
+                <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 600, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--ink)", marginBottom: 4 }}>Weekly CTO → CEO Update</div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: "var(--t1)", letterSpacing: "-.01em" }}>Update for the CEO</div>
               </div>
               <button onClick={() => setOpen(false)} style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--t4)", fontSize: 20, lineHeight: 1, padding: "0 2px" }}>×</button>
@@ -73,7 +73,7 @@ export default function CeoUpdateButton() {
             <div style={{ padding: "20px 22px" }}>
               {loading && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--t3)", fontSize: 13, padding: "30px 0", justifyContent: "center" }}>
-                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", animation: "ceopulse 1s ease-in-out infinite" }} />
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--ink)", animation: "ceopulse 1s ease-in-out infinite" }} />
                   Reading live Asana state and writing your update…
                 </div>
               )}
@@ -97,7 +97,7 @@ export default function CeoUpdateButton() {
                   border: "1px solid var(--border)", borderRadius: 9, padding: "8px 14px", cursor: "pointer",
                 }}>Regenerate</button>
                 <button onClick={copy} style={{
-                  fontSize: 12.5, fontWeight: 600, color: "#fff", background: copied ? "var(--green)" : "var(--accent)",
+                  fontSize: 12.5, fontWeight: 600, color: "var(--bg)", background: copied ? "var(--green)" : "var(--ink)",
                   border: "none", borderRadius: 9, padding: "8px 16px", cursor: "pointer",
                 }}>{copied ? "Copied ✓" : "Copy"}</button>
               </div>

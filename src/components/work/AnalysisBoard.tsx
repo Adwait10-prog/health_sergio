@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import type { MediaTicket } from "@/app/work/analysis/page";
 import type { TicketAnalysis } from "@/app/api/asana/analyze-tickets/route";
-import { DASHBOARD_TOKENS, MONO, softFill } from "./dashboardTokens";
+import { MONO, softFill } from "./dashboardTokens";
 
 const navPill: React.CSSProperties = {
   fontSize: 12.5, color: "var(--t2)", textDecoration: "none",
@@ -97,12 +97,12 @@ export default function AnalysisBoard({ tickets, totalIncomplete }: { tickets: M
   const hasResults = Object.keys(analyses).length > 0;
 
   return (
-    <div style={{ ...DASHBOARD_TOKENS, padding: "32px 40px 80px" }}>
+    <div className="main">
       <div>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
           <div>
-            <div style={{ ...monoMicro, letterSpacing: ".16em", color: "var(--accent)", marginBottom: 11 }}>Media Squad · Tech Triage</div>
+            <div style={{ ...monoMicro, letterSpacing: ".16em", color: "var(--ink-4)", marginBottom: 11 }}>Media Squad · Tech Triage</div>
             <h1 style={{ fontSize: 31, fontWeight: 700, letterSpacing: "-.025em", margin: 0, lineHeight: 1.04 }}>Ticket Analysis</h1>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -147,8 +147,8 @@ export default function AnalysisBoard({ tickets, totalIncomplete }: { tickets: M
         {/* Run row */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24, flexWrap: "wrap" }}>
           <button onClick={runAnalysis} disabled={loading || selected.size === 0} style={{
-            fontSize: 13, fontWeight: 700, color: "#fff",
-            background: loading || selected.size === 0 ? "var(--t4)" : "var(--accent)",
+            fontSize: 13, fontWeight: 700, color: "var(--bg)",
+            background: loading || selected.size === 0 ? "var(--t4)" : "var(--ink)",
             border: "none", borderRadius: 10, padding: "11px 20px",
             cursor: loading || selected.size === 0 ? "default" : "pointer",
           }}>
@@ -168,7 +168,7 @@ export default function AnalysisBoard({ tickets, totalIncomplete }: { tickets: M
             const tech = a ? TECH[a.isTechProblem] : null;
             const auto = a ? AUTO[a.automationOpportunity] : null;
             return (
-              <div key={t.asanaGid} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, boxShadow: "var(--shadow-sm)", overflow: "hidden" }}>
+              <div key={t.asanaGid} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r)", boxShadow: "var(--shadow-sm)", overflow: "hidden" }}>
                 {/* header */}
                 <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 9 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
@@ -218,8 +218,8 @@ export default function AnalysisBoard({ tickets, totalIncomplete }: { tickets: M
                       </div>
                       <p style={{ fontSize: 12.5, color: "var(--t1)", margin: 0, lineHeight: 1.55 }}>{a.automationIdea}</p>
                     </div>
-                    <div style={{ borderLeft: "3px solid var(--accent)", paddingLeft: 13 }}>
-                      <div style={{ ...monoMicro, color: "var(--accent)", marginBottom: 4 }}>Recommendation</div>
+                    <div style={{ borderLeft: "3px solid var(--ink)", paddingLeft: 13 }}>
+                      <div style={{ ...monoMicro, color: "var(--ink)", marginBottom: 4 }}>Recommendation</div>
                       <p style={{ fontSize: 12.5, color: "var(--t1)", margin: 0, lineHeight: 1.55, fontWeight: 500 }}>{a.recommendation}</p>
                     </div>
                   </div>
@@ -228,7 +228,7 @@ export default function AnalysisBoard({ tickets, totalIncomplete }: { tickets: M
             );
           })}
           {selectedTickets.length === 0 && (
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, boxShadow: "var(--shadow-sm)", padding: 20, textAlign: "center", color: "var(--t4)", fontSize: 13 }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r)", boxShadow: "var(--shadow-sm)", padding: 20, textAlign: "center", color: "var(--t4)", fontSize: 13 }}>
               No tickets selected. Search above to add tickets for analysis.
             </div>
           )}
