@@ -41,3 +41,11 @@ export function daysAgoUTC(n: number): Date {
   const dateStr = new Date(istMs).toISOString().split("T")[0];
   return istDateToUTC(dateStr);
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "5 Oct" for a YYYY-MM-DD string or a UTC-midnight Date (en-GB in Node writes "Sept") */
+export function dayMonth(d: string | Date): string {
+  const dt = typeof d === "string" ? new Date(d + "T00:00:00Z") : d;
+  return `${dt.getUTCDate()} ${MONTHS[dt.getUTCMonth()]}`;
+}

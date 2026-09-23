@@ -453,6 +453,18 @@ model EodUpdate {
   updatedAt DateTime @updatedAt
 }
 
+// The numbers logged over WhatsApp ("reliance 90", "demos 2", "ferritin 38"). One value per key per day.
+model Metric {
+  id        String   @id @default(cuid())
+  key       String            // "reliance" | "demos" | "ferritin"
+  value     Float
+  date      DateTime          // midnight IST as UTC
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([key, date])
+}
+
 // Adwait OS page — free-text notes (e.g. key "three" = today's three)
 model OsNote {
   key       String   @id

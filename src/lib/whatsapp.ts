@@ -21,6 +21,7 @@ export interface ParsedMessage {
     | "skip_session"         // "skip today's run" / "rest today instead"
     | "create_asana_task"    // "create a task in asana — fix the login bug" / "add to asana: ..."
     | "draft_eod"            // "draft my update" / "eod" — compose the evening update for the Rian group
+    | "log_metric"           // "reliance 90" / "demos 2" / "ferritin 38" — one of the five numbers
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -39,7 +40,7 @@ CRITICAL CLASSIFICATION RULE:
 
 Respond ONLY with valid JSON:
 {
-  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "reschedule_session" | "skip_session" | "create_asana_task" | "draft_eod" | "unknown",
+  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "reschedule_session" | "skip_session" | "create_asana_task" | "draft_eod" | "log_metric" | "unknown",
   "data": {
     // For journal:
     //   journalText: the full journal entry as-is (preserve his words exactly)
@@ -96,6 +97,11 @@ Respond ONLY with valid JSON:
     // For skip_session:
     //   day: "today" | "tomorrow" | "monday" etc — which day's session to skip (default "today")
     //   reason: short reason string if mentioned, else null
+    //
+    // For log_metric:
+    //   key: "reliance" (Reliance content output, minutes per day) | "demos" (demos sent this week) | "ferritin" (blood test, ng/mL)
+    //   value: the number (e.g. 90)
+    //   Use this intent for a bare number update on one of those three, e.g. "reliance 90", "demos 2 this week", "ferritin came back 38"
     //
     // For draft_eod:
     //   notes: anything he says about what he did or shipped today, preserved verbatim (or null if he only asked for the draft)
@@ -214,6 +220,15 @@ Examples:
 
 - "create ticket named fix dashboard filters in Core Engineering backlog — the date filter doesn't reset when switching views"
   → intent: create_asana_task, taskTitle: "fix dashboard filters", taskDescription: "the date filter doesn't reset when switching views", projectHint: "Core Engineering", sectionHint: "backlog", assigneeHint: null
+
+- "reliance 90" / "reliance at 110 min a day now"
+  → intent: log_metric, key: "reliance", value: 90 / 110
+
+- "demos 2" / "sent 2 demos this week"
+  → intent: log_metric, key: "demos", value: 2
+
+- "ferritin 38"
+  → intent: log_metric, key: "ferritin", value: 38
 
 - "draft my update"
   → intent: draft_eod, notes: null

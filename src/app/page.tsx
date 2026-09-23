@@ -1,499 +1,261 @@
-import { db } from "@/lib/db";
-import { getUserId, ASANA_OWNER_GID } from "@/lib/user";
-import { calcDisciplineScore, calcMomentumScore, calcWeeklyCTOScore, calcWeeklyFounderScore } from "@/lib/scores";
-import { startOfDay, startOfWeek, subDays, format } from "date-fns";
-import { todayUTC, yesterdayUTC, daysAgoUTC } from "@/lib/date";
-import { getTodayHMSession, getCurrentWeekHMStats, getRaceCountdown } from "@/lib/hmTracker";
-import { getPatternInsights } from "@/lib/patternInsights";
 import Link from "next/link";
-import ScoreRing from "@/components/today/ScoreRing";
+import { loadToday } from "@/lib/today";
+import { OS } from "@/lib/osData";
+import { dayMonth } from "@/lib/date";
+import StatBox, { Spark } from "@/components/today/StatBox";
+import OutcomeCard, { DraftEodButton } from "@/components/today/OutcomeCard";
+import ThreeChecklist from "@/components/today/ThreeChecklist";
+import BlockChart from "@/components/today/BlockChart";
+import StreamsBar from "@/components/today/StreamsBar";
+import Checklist from "@/components/os/Checklist";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 import HabitStreaks from "@/components/today/HabitStreaks";
 import DeepWorkTimer from "@/components/today/DeepWorkTimer";
 import QuickLog from "@/components/today/QuickLog";
 import YesterdayRecap from "@/components/today/YesterdayRecap";
+import FitnessPanel from "@/components/today/FitnessPanel";
 import TaskList from "@/components/tasks/TaskList";
 import CoachBriefModal from "@/components/modals/CoachBriefModal";
 import ImportResponseModal from "@/components/modals/ImportResponseModal";
-import LiveClock from "@/components/today/LiveClock";
-import FitnessPanel from "@/components/today/FitnessPanel";
-import TodaysThree from "@/components/os/TodaysThree";
-import { OS } from "@/lib/osData";
-import { computeMode, nextCountdown } from "@/lib/osLogic";
 
 export const dynamic = "force-dynamic";
 
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
-
-// Always convert to IST before extracting date — DB stores midnight IST as 18:30 UTC
-function localKey(d: Date): string {
-  const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-  return `${ist.getFullYear()}-${String(ist.getMonth() + 1).padStart(2, "0")}-${String(ist.getDate()).padStart(2, "0")}`;
-}
+const last = <T,>(a: T[]) => a[a.length - 1];
+const fmtShort = dayMonth;
 
 export default async function TodayPage() {
-  const userId = getUserId();
-  // Use IST-aware today so localKey comparisons line up with DB dates
-  const todayIST = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
-  const todayISTStr = todayIST.toISOString().split("T")[0];
-  const [ty, tm, td] = todayISTStr.split("-").map(Number);
-  const today = new Date(Date.UTC(ty, tm - 1, td)); // midnight UTC for IST-date comparisons
-  const yesterday = subDays(today, 1);
-  const weekStart = startOfDay(startOfWeek(today, { weekStartsOn: 1 }));
-  const last7Start = subDays(today, 7);
-  const last28Start = subDays(today, 28);
+  const t = await loadToday();
+  const n = t.numbers;
+  const cfg = OS.numbers;
 
-  // IST-aware DB dates (DB stores midnight IST as UTC)
-  const todayDB    = todayUTC();
-  const yesterdayDB = yesterdayUTC();
-  const last7DB    = daysAgoUTC(7);
-  const last28DB   = daysAgoUTC(28);
-  const last35DB   = daysAgoUTC(35);
+  // "Wed 23 Sep 2026 · 18:10 IST" (built by hand: en-GB writes "Sept")
+  const nowIST = new Date(Date.now() + 5.5 * 3600000);
+  const dateline = `${nowIST.toUTCString().slice(0, 3)} ${nowIST.getUTCDate()} ${nowIST.toUTCString().slice(8, 11)} ${nowIST.getUTCFullYear()} · ${nowIST.toISOString().slice(11, 16)} IST`;
 
-  const [
-    todayLog, yesterdayLog, last7Logs, todayTasks,
-    weekTechLogs, weekFounderLogs,
-    last35TechLogs, last35FounderLogs,
-    last7Strava, last28Strava,
-    last35Reflections,
-    wipTasks,
-    osThree,
-    recentEods,
-  ] = await Promise.all([
-    db.dailyLog.findFirst({ where: { userId, date: todayDB } }),
-    db.dailyLog.findFirst({ where: { userId, date: yesterdayDB } }),
-    db.dailyLog.findMany({ where: { userId, date: { gte: last35DB } }, orderBy: { date: "desc" } }),
-    db.task.findMany({ where: { userId, isToday: true, status: { not: "cancelled" } }, orderBy: [{ priority: "asc" }, { createdAt: "asc" }] }),
-    db.technicalLog.findMany({ where: { userId, date: { gte: weekStart } } }),
-    db.founderLog.findMany({ where: { userId, date: { gte: weekStart } } }),
-    db.technicalLog.findMany({ where: { userId, date: { gte: last35DB } } }),
-    db.founderLog.findMany({ where: { userId, date: { gte: last35DB } } }),
-    db.stravaActivity.findMany({ where: { userId, date: { gte: last7Start } }, orderBy: { date: "desc" } }),
-    db.stravaActivity.findMany({ where: { userId, date: { gte: last28Start } }, orderBy: { date: "desc" } }),
-    db.reflection.findMany({ where: { userId, type: "daily", date: { gte: last35DB } } }),
-    db.asanaTask.findMany({
-      where: {
-        assigneeGid: ASANA_OWNER_GID,
-        status: "incomplete",
-        parentGid: null,
-        sectionName: { in: ["WIP", "Work in Progress", "In Progress", "Prioritized", "Exploring", "Planning/Scoping"] },
-      },
-      orderBy: { syncedAt: "desc" },
-      take: 5,
-      select: { asanaGid: true, name: true, sectionName: true, dueOn: true, permalink: true, project: { select: { name: true } } },
-    }),
-    db.osNote.findUnique({ where: { key: "three" } }),
-    db.eodUpdate.findMany({ where: { date: { gte: daysAgoUTC(30) } }, orderBy: { date: "desc" } }),
-  ]);
+  const until = t.mode === "skeleton" ? `Until ${fmtShort(OS.skeletonEnds)}` : t.mode === "block" ? `Until ${fmtShort(OS.raceDay)}` : "After TMM";
 
-  // Adwait OS strip — mode + next countdown (today is already midnight-IST-as-UTC)
-  const osMode = computeMode(today);
-  const osNext = nextCountdown(today);
-  const OS_MODE_COLOR = { skeleton: "var(--c-technical)", block: "var(--warn)", post: "var(--c-fitness)" } as const;
+  const reliance = last(n.reliance);
+  const demos = last(n.demos);
+  const demosPrev = n.demos.length > 1 ? n.demos[n.demos.length - 2].value : null;
+  const ferritin = last(n.ferritin);
+  const weekNow = last(n.week.km);
+  const toGo = n.week.target ? Math.round((n.week.target - weekNow) * 10) / 10 : null;
 
-  // EoD — the daily work record. Latest row (today's, or the most recent before it) + 30-day hit rate.
-  const latestEod = recentEods[0] ?? null;
-  const eodIsToday = !!latestEod && latestEod.date.getTime() === todayDB.getTime();
-  const eodStreams: string[] = (() => { try { return latestEod ? JSON.parse(latestEod.streams) : []; } catch { return []; } })();
-  const eodWithNumber = recentEods.filter(e => /\d/.test(e.outcome)).length;
-
-  // last7 slices for score enrichment
-  const last7TechLogs    = last35TechLogs.filter(l => l.date >= last7Start);
-  const last7FounderLogs = last35FounderLogs.filter(l => l.date >= last7Start);
-  const last35Strava     = [...last7Strava, ...last28Strava.filter(a => !last7Strava.find(b => b.id === a.id))];
-
-  // Enrich yesterdayLog with Strava + tech + founder data before scoring
-  const yesterdayKey = localKey(yesterday);
-  const enrichedYesterday = yesterdayLog ? { ...yesterdayLog } : null;
-  if (enrichedYesterday) {
-    if (last35Strava.some(a => localKey(a.date) === yesterdayKey && a.type !== "Walk")) enrichedYesterday.didWorkout = true;
-    if (last35TechLogs.some(tl => localKey(tl.date) === yesterdayKey && (tl.hoursCodedMin ?? 0) > 0)) enrichedYesterday.didCode = true;
-    if (last35TechLogs.some(tl => localKey(tl.date) === yesterdayKey && ((tl.aiAgentsBuilt ?? 0) + (tl.promptsEngineered ?? 0) + (tl.modelsExperimented ?? 0)) > 0)) enrichedYesterday.didLearn = true;
-    if (last35FounderLogs.some(fl => localKey(fl.date) === yesterdayKey && ((fl.newPeopleMet ?? 0) + (fl.highValueConnections ?? 0) + (fl.coffeeChats ?? 0) + (fl.linkedinPosts ?? 0)) > 0)) enrichedYesterday.didNetwork = true;
-    if (last35Reflections.some(r => localKey(r.date) === yesterdayKey && r.journalText)) enrichedYesterday.didJournal = true;
-  }
-
-  const disciplineScore = calcDisciplineScore(enrichedYesterday);
-  const momentumScore   = calcMomentumScore(enrichedYesterday);
-  const ctoScore        = calcWeeklyCTOScore(weekTechLogs);
-  const founderScore    = calcWeeklyFounderScore(weekFounderLogs);
-  const [todayHMSession, weekHMStats, raceCountdown, patternInsights] = await Promise.all([
-    getTodayHMSession(),
-    getCurrentWeekHMStats(),
-    getRaceCountdown(),
-    getPatternInsights(userId),
-  ]);
-
-  // 4-week mileage buckets
-  type WeekBucket = { label: string; km: number; targetKm: number };
-  const weekBuckets: WeekBucket[] = [];
-  for (let w = 3; w >= 0; w--) {
-    const wStart = startOfDay(startOfWeek(subDays(today, w * 7), { weekStartsOn: 1 }));
-    const wEnd   = new Date(wStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const runs   = last28Strava.filter(a => a.date >= wStart && a.date < wEnd && (a.type === "Run" || a.type === "TrailRun"));
-    const km     = runs.reduce((s, a) => s + (a.distanceM ?? 0) / 1000, 0);
-    weekBuckets.push({
-      label: w === 0 ? "This wk" : w === 1 ? "Last wk" : `${w}wk ago`,
-      km: Math.round(km * 10) / 10,
-      targetKm: w === 0 ? weekHMStats.targetKm : Math.max(km, 1),
-    });
-  }
-
-  // Synthesise enriched logs for habit streaks
-  type EnrichedLog = (typeof last7Logs)[0] & { _date: string };
-  const dateMap = new Map<string, EnrichedLog>();
-
-  for (const log of last7Logs) {
-    const key = localKey(log.date);
-    dateMap.set(key, { ...log, _date: key });
-  }
-  for (let i = 0; i < 7; i++) {
-    const d = subDays(today, i);
-    const key = localKey(d);
-    if (!dateMap.has(key)) {
-      dateMap.set(key, {
-        id: key, userId, date: d, _date: key,
-        weightKg: null, sleepMin: null, rhrBpm: null, energyLevel: null,
-        stressLevel: null, moodScore: null, anxietyLevel: null,
-        didWorkout: false, didRead: false, didCode: false,
-        didJournal: false, didMeditate: false, didNetwork: false, didLearn: false,
-        deepWorkMin: null, distractionCount: null, tasksPlanned: null, tasksCompleted: null,
-        kcal: null, proteinG: null, waterL: null, alcoholUnits: null,
-        disciplineScore: null, momentumScore: null, notes: null, loggedAt: d,
-      } as EnrichedLog);
-    }
-  }
-  // Workout → Strava (any non-walk activity)
-  for (const sa of last35Strava) {
-    const e = dateMap.get(localKey(sa.date));
-    if (e && sa.type !== "Walk") e.didWorkout = true;
-  }
-  // Code + Learn → TechnicalLog
-  for (const tl of last35TechLogs) {
-    const e = dateMap.get(localKey(tl.date));
-    if (e) {
-      if ((tl.hoursCodedMin ?? 0) > 0) e.didCode = true;
-      if ((tl.aiAgentsBuilt ?? 0) + (tl.promptsEngineered ?? 0) + (tl.modelsExperimented ?? 0) + (tl.modelsExperimented ?? 0) > 0) e.didLearn = true;
-    }
-  }
-  // Network → FounderLog (people met, connections, linkedin posts, outreach)
-  for (const fl of last35FounderLogs) {
-    const e = dateMap.get(localKey(fl.date));
-    if (e && (fl.newPeopleMet ?? 0) + (fl.highValueConnections ?? 0) + (fl.coffeeChats ?? 0) + (fl.linkedinPosts ?? 0) + (fl.investorOutreach ?? 0) + (fl.followUpsDone ?? 0) > 0) e.didNetwork = true;
-  }
-  // Journal → Reflection page daily entry with text
-  for (const r of last35Reflections) {
-    const e = dateMap.get(localKey(r.date));
-    if (e && r.journalText) e.didJournal = true;
-  }
-
-  const enrichedLogs = Array.from(dateMap.values()).sort((a, b) => b._date.localeCompare(a._date)) as typeof last7Logs;
-  const hasScoreData = disciplineScore > 0 || momentumScore > 0 || ctoScore > 0 || founderScore > 0;
+  const vlog = t.todayLog ?? t.yesterdayLog;
+  const vitals = vlog ? [
+    { label: "RHR", value: vlog.rhrBpm, unit: "bpm" },
+    { label: "HRV", value: vlog.hrvMs, unit: "ms" },
+    { label: "VO₂ max", value: vlog.vo2MaxMlKgMin, unit: "ml/kg" },
+    { label: "Weight", value: vlog.weightKg, unit: "kg" },
+  ].filter(v => v.value != null) : [];
+  const latestRun = t.strava[0];
 
   return (
-    <div style={{ padding: "36px 40px 80px" }}>
+    <div className="main">
 
-      {/* ── Full-width header ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--text-1)", margin: 0, letterSpacing: "-0.03em" }}>
-              {greeting()}, Adwait
-            </h1>
-            <LiveClock />
-          </div>
-          <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 4, marginBottom: 0 }}>
-            {format(new Date(), "EEEE, d MMMM yyyy")}
-            {weekHMStats.weekNum > 0 && (
-              <span style={{ color: "var(--c-today)", fontWeight: 600 }}>
-                &nbsp;·&nbsp;HM Training Wk {weekHMStats.weekNum} / 24
-              </span>
-            )}
-          </p>
+      {/* ── Topbar ── */}
+      <div className="topbar">
+        <div className="left">
+          <span className="pill accent"><i className="dot" /> {t.modeCfg.label}</span>
+          <span className="meta">{dateline}</span>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <CoachBriefModal />
-          <ImportResponseModal />
+        <div className="right">
+          <DraftEodButton />
+          <ThemeToggle compact />
         </div>
       </div>
 
-      {/* ── Outcome: today's EoD headline (the work record) ── */}
-      <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: "18px 22px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: latestEod ? 8 : 4 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, color: "var(--c-technical)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Outcome · {latestEod ? (eodIsToday ? "today" : format(new Date(latestEod.date.getTime() + 5.5 * 60 * 60 * 1000), "EEE d MMM")) : "today"}
-          </span>
-          <span style={{ fontSize: 11, color: "var(--text-4)" }}>
-            {recentEods.length > 0 ? `${eodWithNumber} of ${recentEods.length} EoDs in 30 days led with a number` : "EoD not started yet"}
-          </span>
-        </div>
-        {latestEod ? (
-          <>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-1)", lineHeight: 1.45 }}>{latestEod.outcome}</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 10 }}>
-              {eodStreams.map(s => (
-                <span key={s} style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "var(--c-technical-bg)", color: "var(--c-technical)" }}>{s}</span>
-              ))}
-              {!eodIsToday && <span style={{ fontSize: 11, color: "var(--text-4)" }}>Send &ldquo;draft my update&rdquo; on WhatsApp for today&rsquo;s.</span>}
-            </div>
-            <details style={{ marginTop: 10 }}>
-              <summary style={{ fontSize: 11.5, color: "var(--text-3)", cursor: "pointer" }}>Full update</summary>
-              <pre style={{ margin: "8px 0 0", whiteSpace: "pre-wrap", font: "inherit", fontSize: 12.5, lineHeight: 1.55, color: "var(--text-2)", background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px" }}>{latestEod.draft}</pre>
-            </details>
-          </>
-        ) : (
-          <div style={{ fontSize: 13, color: "var(--text-3)" }}>
-            No EoD yet. Around 6pm, send &ldquo;draft my update&rdquo; on WhatsApp (text or voice note, with anything you want included). The outcome line lands here.
-          </div>
-        )}
+      <div className="modebar">
+        <span className="eyebrow" style={{ color: "var(--accent)", whiteSpace: "nowrap" }}>{until}</span>
+        <span className="hint">{t.modeCfg.rules}</span>
       </div>
 
-      {/* ── Top row: Performance Scores + Apple Watch vitals (same height) ── */}
-      {(() => {
-        const vlog = todayLog ?? yesterdayLog;
-        const hasVitals = vlog && (vlog.rhrBpm || vlog.hrvMs || vlog.vo2MaxMlKgMin || vlog.weightKg);
-        const rhrColor = !vlog?.rhrBpm ? "var(--text-1)" : vlog.rhrBpm <= 60 ? "var(--c-fitness)" : vlog.rhrBpm <= 70 ? "var(--text-1)" : "var(--c-warn)";
-        const hrvColor = !vlog?.hrvMs ? "var(--text-1)" : vlog.hrvMs >= 60 ? "var(--c-fitness)" : vlog.hrvMs >= 40 ? "var(--text-1)" : "var(--c-warn)";
-        return (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "stretch", marginBottom: 20 }} className="today-two-col">
-            {/* Performance Scores */}
-            <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>Performance scores</h2>
-                <span style={{ fontSize: 12, color: "var(--text-4)" }}>Based on yesterday's logs</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-around" }}>
-                <ScoreRing label="Momentum"   score={momentumScore}   color="var(--c-today)" />
-                <ScoreRing label="Discipline" score={disciplineScore} color="var(--c-reflection)" />
-                <ScoreRing label="Founder"    score={founderScore}    color="var(--c-founder)" />
-                <ScoreRing label="CTO"        score={ctoScore}        color="var(--c-technical)" />
-              </div>
-              {!hasScoreData && (
-                <p style={{ fontSize: 12, textAlign: "center", marginTop: 16, color: "var(--text-4)" }}>
-                  Fill yesterday's log to see scores update
-                </p>
-              )}
-            </div>
-            {/* Apple Watch vitals — same height as scores */}
-            {hasVitals ? (
-              <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 20, boxShadow: "var(--shadow)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>
-                  {todayLog ? "Today · Apple Watch" : "Yesterday · Apple Watch"}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, flex: 1 }}>
-                  {vlog!.rhrBpm && <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                    <div style={{ fontSize: 10, color: "var(--text-4)", marginBottom: 3 }}>❤️ RHR</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: rhrColor }}>{vlog!.rhrBpm} <span style={{ fontSize: 11, fontWeight: 400 }}>bpm</span></div>
-                  </div>}
-                  {vlog!.hrvMs && <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                    <div style={{ fontSize: 10, color: "var(--text-4)", marginBottom: 3 }}>🫀 HRV</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: hrvColor }}>{vlog!.hrvMs} <span style={{ fontSize: 11, fontWeight: 400 }}>ms</span></div>
-                  </div>}
-                  {vlog!.vo2MaxMlKgMin && <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                    <div style={{ fontSize: 10, color: "var(--text-4)", marginBottom: 3 }}>🫁 VO₂ Max</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--c-technical)" }}>{vlog!.vo2MaxMlKgMin} <span style={{ fontSize: 11, fontWeight: 400 }}>ml/kg</span></div>
-                  </div>}
-                  {vlog!.weightKg && <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                    <div style={{ fontSize: 10, color: "var(--text-4)", marginBottom: 3 }}>⚖️ Weight</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text-1)" }}>{vlog!.weightKg} <span style={{ fontSize: 11, fontWeight: 400 }}>kg</span></div>
-                  </div>}
-                </div>
-              </div>
-            ) : <div />}
-          </div>
-        );
-      })()}
+      {/* ── Five numbers ── */}
+      <section className="stats" aria-label="Five numbers">
+        <StatBox
+          eyebrow="Separation" value={n.separation.done} unit={`/${n.separation.total}`}
+          visual={<div className="segs">{n.separation.statuses.map((s, i) => <i key={i} className={s === "done" ? "done" : s === "prog" ? "prog" : ""} />)}</div>}
+          note="→ cutover" delta={`${n.separation.prog} in prog`}
+        />
+        <StatBox
+          eyebrow={cfg.reliance.label} value={reliance?.value ?? "—"} unit={cfg.reliance.unit}
+          visual={<Spark values={n.reliance.map(p => p.value)} />}
+          note={`from ${cfg.reliance.baseline} · ${cfg.reliance.note}`}
+          delta={reliance ? `×${(reliance.value / cfg.reliance.baseline).toFixed(1)}` : "—"}
+          tone={reliance && reliance.value > cfg.reliance.baseline ? "up" : "flat"}
+        />
+        <StatBox
+          eyebrow={cfg.demos.label} value={demos?.value ?? "—"} unit={cfg.demos.unit}
+          visual={<Spark values={n.demos.map(p => p.value)} target={cfg.demos.target} area={false} />}
+          note={cfg.demos.note}
+          delta={demos && demosPrev != null && demos.value !== demosPrev ? `${demos.value > demosPrev ? "+" : ""}${demos.value - demosPrev}` : "—"}
+          tone={demos && demosPrev != null ? (demos.value > demosPrev ? "up" : demos.value < demosPrev ? "down" : "flat") : "flat"}
+        />
+        <StatBox
+          eyebrow="Week km" value={Math.round(weekNow)} unit={n.week.target ? `/ ${n.week.target}` : "km"}
+          visual={<Spark values={n.week.km} target={n.week.target} />}
+          note={n.week.label}
+          delta={toGo == null ? "—" : toGo <= 0 ? "✓ hit" : `${toGo} to go`}
+          tone={toGo != null && toGo <= 0 ? "up" : "flat"}
+        />
+        <StatBox
+          eyebrow={cfg.ferritin.label} value={ferritin?.value ?? "—"} unit={cfg.ferritin.unit}
+          visual={n.ferritin.length > 1 ? <Spark values={n.ferritin.map(p => p.value)} /> : <div className="bar"><i style={{ width: 0 }} /></div>}
+          note={n.panelDays != null && n.panelDays >= 0 ? `Nov panel · ${n.panelDays}d` : "panel done"}
+          delta={ferritin ? fmtShort(ferritin.date) : cfg.ferritin.note}
+        />
+      </section>
 
-      {/* ── Two-column layout (everything) ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "start" }}
-        className="today-two-col">
-
-        {/* Left column — wide content */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
-
-          <HabitStreaks logs={enrichedLogs} today={today} />
-          <FitnessPanel
-            todaySession={todayHMSession}
-            recentActivities={last28Strava.slice(0, 8).map(a => ({
-              id: a.id, name: a.name, type: a.type, date: a.date,
-              distanceM: a.distanceM, movingTimeSec: a.movingTimeSec,
-              avgHeartRate: a.avgHeartRate, avgSpeedMps: a.avgSpeedMps,
-              totalElevationM: a.totalElevationM,
-            }))}
-            weekBuckets={weekBuckets}
-            currentWeekKm={weekBuckets[3]?.km ?? 0}
-            currentWeekTargetKm={weekHMStats.targetKm}
-            weekNum={weekHMStats.weekNum}
-            raceCountdown={raceCountdown}
-            inlineMode
+      <div className="grid g-32" style={{ marginTop: "var(--s3)" }}>
+        {/* Left column */}
+        <div className="stack">
+          <OutcomeCard eod={t.eod} />
+          <ThreeChecklist
+            key={t.three.text}
+            lines={t.three.lines} initialDone={t.three.done} listKey={t.three.listKey}
+            written={t.three.written} text={t.three.text}
           />
+          <BlockChart index={t.block.index} daysToStart={t.block.daysToStart} />
         </div>
 
-        {/* Right sidebar — scrolls with page, stacks all the info cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-          {/* Adwait OS — mode + today's three */}
-          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: 6, fontWeight: 700, fontSize: 10.5, letterSpacing: ".05em", textTransform: "uppercase", color: "#fff", background: OS_MODE_COLOR[osMode] }}>
-                {OS.modes[osMode].label}
-              </span>
-              <Link href="/os" style={{ fontSize: 11, color: "var(--text-4)", textDecoration: "none" }}>Open OS →</Link>
-            </div>
-            <div style={{ fontSize: 11.5, color: "var(--text-3)", marginBottom: 10, lineHeight: 1.4 }}>{OS.modes[osMode].hint}</div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Today&rsquo;s three</div>
-            <TodaysThree initialText={osThree?.text ?? ""} compact />
-            {osNext && (
-              <div style={{ marginTop: 10, fontSize: 11.5, color: "var(--text-3)" }}>
-                Next: <span style={{ color: "var(--text-1)", fontWeight: 600 }}>{osNext.label}</span>
-                <span style={{ color: osNext.days <= 7 ? "var(--warn)" : osNext.days <= 21 ? "var(--c-today)" : "var(--text-3)", fontWeight: 700 }}> · {osNext.days === 0 ? "today" : `${osNext.days}d`}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Race countdown */}
-          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--c-fitness)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Vedanta Delhi HM</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontSize: 36, fontWeight: 800, color: "var(--text-1)", lineHeight: 1 }}>{raceCountdown}</span>
-              <span style={{ fontSize: 13, color: "var(--text-3)" }}>days to race</span>
-            </div>
-            <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-4)" }}>Sunday 18 Oct 2026 · Delhi</div>
-            {weekHMStats.weekNum > 0 && (
-              <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-3)" }}>
-                Week <strong>{weekHMStats.weekNum}</strong> / 24 · {weekHMStats.doneKm.toFixed(1)} km done this week
-              </div>
-            )}
-          </div>
-
-          {/* Today's Training */}
-          {todayHMSession && (
-            <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--c-fitness)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-                Today's Training · Wk {todayHMSession.weekNum}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: "var(--c-fitness-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>
-                  {todayHMSession.type.startsWith("gym") ? "🏋️" : todayHMSession.type === "easy" ? "🏃" : todayHMSession.type === "quality" ? "⚡" : todayHMSession.type === "long" ? "🛤️" : todayHMSession.type === "swim" ? "🏊" : "🏅"}
+        {/* Right column */}
+        <div className="stack">
+          <section className="card">
+            <div className="card-h"><span className="eyebrow">Next</span><Link className="meta" href="/os">all {t.countdownTotal} →</Link></div>
+            {t.countdowns.map(c => {
+              const tone = c.days == null || c.days <= 3 ? "now" : c.days <= 14 ? "soon" : "later";
+              return (
+                <div key={c.id} className={`cd ${tone}`}>
+                  <span className="d">{c.days == null ? "—" : c.days}</span>
+                  <span>{c.label}{c.days == null && c.when && <span className="when" style={{ display: "block" }}>{c.when}</span>}</span>
+                  <span className="when">{c.days == null ? "" : c.when}</span>
                 </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-1)" }}>{todayHMSession.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-4)" }}>
-                    {todayHMSession.targetMin ? `~${todayHMSession.targetMin} min` : ""}
-                    {todayHMSession.targetKm ? ` · ${todayHMSession.targetKm} km` : ""}
-                  </div>
-                </div>
-              </div>
-              {!todayHMSession.logStatus && (
-                <a href="/log" style={{ display: "block", textAlign: "center", padding: "7px 0", fontSize: 12, fontWeight: 600, color: "#fff", background: "var(--c-fitness)", borderRadius: "var(--radius-xs)", textDecoration: "none" }}>
-                  Log it →
-                </a>
-              )}
-              {todayHMSession.logStatus && (
-                <div style={{ textAlign: "center", padding: "7px 0", fontSize: 12, fontWeight: 600, color: "var(--c-fitness)", background: "var(--c-fitness-bg)", borderRadius: "var(--radius-xs)" }}>
-                  ✓ {todayHMSession.logStatus}
-                </div>
-              )}
-            </div>
-          )}
+              );
+            })}
+          </section>
 
-          {/* Vitals snapshot */}
-          <YesterdayRecap log={todayLog ?? yesterdayLog} label={todayLog ? "Today's vitals" : "Yesterday's vitals"} />
+          <section className="card">
+            <div className="card-h"><span className="eyebrow">ElevenLabs</span><span className="pill info">partnership</span></div>
+            <ul className="tl">
+              {OS.elevenlabs.slice(0, 4).map(e => (
+                <li key={e.label} className={e.status === "done" ? "done" : e.status === "next" ? "next" : undefined}>
+                  {e.label}<small>{e.when}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
 
-          {/* Pattern Insights */}
-          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--c-founder)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>💡 Coach Insights · 30 days</div>
-            <p style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.6, margin: 0 }}>{patternInsights}</p>
-          </div>
+          <StreamsBar streams={t.streams} days={t.streamDays} />
 
-          {/* Asana WIP strip */}
-          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--c-technical)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                ⬡ Active Work · Asana
-              </div>
-              <Link href="/work" style={{ fontSize: 11, color: "var(--text-4)", textDecoration: "none" }}>All tasks →</Link>
-            </div>
-            {wipTasks.length === 0 ? (
-              <p style={{ fontSize: 12, color: "var(--text-4)", margin: 0 }}>No WIP tasks assigned to you right now.</p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {wipTasks.map(t => (
-                  <a
-                    key={t.asanaGid}
-                    href={t.permalink ?? `https://app.asana.com/0/${t.asanaGid}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ display: "flex", alignItems: "flex-start", gap: 8, textDecoration: "none", padding: "7px 8px", borderRadius: 6, background: "var(--bg-subtle)" }}
-                  >
-                    <span style={{ marginTop: 1, fontSize: 13, flexShrink: 0, color: "var(--c-technical)" }}>◈</span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-1)", lineHeight: 1.35, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {t.name}
-                      </div>
-                      <div style={{ fontSize: 10, color: "var(--text-4)", marginTop: 2 }}>
-                        {t.project?.name ?? "—"}
-                        {t.dueOn && <span style={{ color: new Date(t.dueOn) < new Date() ? "var(--c-warn)" : "var(--text-4)" }}> · due {t.dueOn}</span>}
-                      </div>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Tasks */}
-          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-            <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-1)", margin: "0 0 10px" }}>Today's Tasks</h2>
-            <TaskList initialTasks={todayTasks as any} isToday={true} defaultSection="today" />
-          </div>
-
-          {/* Quick log */}
-          <QuickLog />
-
-          {/* Deep work timer */}
-          <DeepWorkTimer />
-
-          {/* Latest Strava */}
-          {last7Strava[0] && (
-            <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Latest Strava</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                <span style={{ display: "inline-block", padding: "2px 8px", fontSize: 10, fontWeight: 700, borderRadius: 20, color: "#fff", background: "var(--c-fitness)", textTransform: "uppercase" }}>{last7Strava[0].type}</span>
-                <span style={{ fontSize: 11, color: "var(--text-4)" }}>{format(new Date(last7Strava[0].date), "EEE d MMM")}</span>
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-1)", marginBottom: 8 }}>{last7Strava[0].name}</div>
-              <div style={{ display: "flex", gap: 16 }}>
-                {last7Strava[0].movingTimeSec && <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)" }}>
-                    {Math.floor(last7Strava[0].movingTimeSec / 3600) > 0
-                      ? `${Math.floor(last7Strava[0].movingTimeSec / 3600)}h ${Math.floor((last7Strava[0].movingTimeSec % 3600) / 60)}m`
-                      : `${Math.floor(last7Strava[0].movingTimeSec / 60)}m`}
-                  </div>
-                  <div style={{ fontSize: 10, color: "var(--text-4)" }}>Duration</div>
-                </div>}
-                {last7Strava[0].avgHeartRate && <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)" }}>{last7Strava[0].avgHeartRate} bpm</div>
-                  <div style={{ fontSize: 10, color: "var(--text-4)" }}>Avg HR</div>
-                </div>}
-              </div>
-            </div>
-          )}
+          <section className="card">
+            <div className="card-h"><span className="eyebrow">Open · due soon</span><span className="meta">{t.open.items.length} of {t.open.left}</span></div>
+            {t.open.items.length === 0
+              ? <div className="meta">All {t.open.total} open items ticked.</div>
+              : <Checklist listKey="open" items={t.open.items} initialDone={{}} hideCount />}
+          </section>
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 900px) {
-          .today-two-col { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 768px) {
-          .today-two-col > div:last-child { position: static !important; }
-        }
-      `}</style>
+      {/* ── Everything else ── */}
+      <div className="below">
+        <div className="card-h">
+          <span className="eyebrow">Everything else</span>
+          <span style={{ display: "flex", gap: "var(--s2)" }}><CoachBriefModal /><ImportResponseModal /></span>
+        </div>
+
+        <div className="grid g-32">
+          <div className="stack" style={{ minWidth: 0 }}>
+            <HabitStreaks logs={t.habitLogs} today={t.osDay} />
+            <FitnessPanel
+              todaySession={t.todayHMSession}
+              recentActivities={t.strava.slice(0, 8).map(a => ({
+                id: a.id, name: a.name, type: a.type, date: a.date,
+                distanceM: a.distanceM, movingTimeSec: a.movingTimeSec,
+                avgHeartRate: a.avgHeartRate, avgSpeedMps: a.avgSpeedMps,
+                totalElevationM: a.totalElevationM,
+              }))}
+              weekBuckets={t.weekBuckets}
+              currentWeekKm={t.weekBuckets[3]?.km ?? 0}
+              currentWeekTargetKm={t.weekHMStats.targetKm}
+              weekNum={t.weekHMStats.weekNum}
+              raceCountdown={t.raceCountdown}
+              inlineMode
+            />
+          </div>
+
+          <div className="stack">
+            {t.todayHMSession && (
+              <section className="card">
+                <div className="card-h"><span className="eyebrow">Training · wk {t.todayHMSession.weekNum}</span>
+                  {t.todayHMSession.logStatus ? <span className="pill ok">{t.todayHMSession.logStatus}</span> : <Link className="btn sm" href="/log">Log it</Link>}
+                </div>
+                <div className="h3">{t.todayHMSession.name}</div>
+                <div className="meta">
+                  {[t.todayHMSession.targetMin && `~${t.todayHMSession.targetMin} min`, t.todayHMSession.targetKm && `${t.todayHMSession.targetKm} km`].filter(Boolean).join(" · ")}
+                </div>
+              </section>
+            )}
+
+            {vitals.length > 0 && (
+              <section className="card">
+                <div className="card-h"><span className="eyebrow">{t.todayLog ? "Today" : "Yesterday"} · Apple Watch</span></div>
+                <div className="grid g-2" style={{ gap: "var(--s2)" }}>
+                  {vitals.map(v => (
+                    <div key={v.label} className="card inset tight">
+                      <div className="meta">{v.label}</div>
+                      <div><span className="num" style={{ fontSize: 20, fontWeight: 600 }}>{v.value}</span> <span className="meta">{v.unit}</span></div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <YesterdayRecap log={vlog} label={t.todayLog ? "Today's vitals" : "Yesterday's vitals"} />
+
+            <section className="card">
+              <div className="card-h"><span className="eyebrow">Coach insights · 30 days</span></div>
+              <p className="lead" style={{ fontSize: 13, lineHeight: 1.6, margin: 0 }}>{t.patternInsights}</p>
+            </section>
+
+            <section className="card">
+              <div className="card-h"><span className="eyebrow">Active work · Asana</span><Link className="meta" href="/work">All tasks →</Link></div>
+              {t.wipTasks.length === 0 ? (
+                <div className="meta">No WIP tasks assigned to you right now.</div>
+              ) : (
+                t.wipTasks.map(task => (
+                  <a key={task.asanaGid} className="row" href={task.permalink ?? `https://app.asana.com/0/${task.asanaGid}`} target="_blank" rel="noopener noreferrer">
+                    <span className="l" style={{ overflow: "hidden" }}>
+                      <span style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{task.name}</span>
+                      <small>{task.project?.name ?? "—"}{task.dueOn && <span style={{ color: new Date(task.dueOn) < new Date() ? "var(--act)" : undefined }}> · due {task.dueOn}</span>}</small>
+                    </span>
+                  </a>
+                ))
+              )}
+            </section>
+
+            <section className="card">
+              <div className="card-h"><span className="eyebrow">Today&rsquo;s tasks</span></div>
+              <TaskList initialTasks={t.todayTasks as any} isToday={true} defaultSection="today" />
+            </section>
+
+            <QuickLog />
+            <DeepWorkTimer />
+
+            {latestRun && (
+              <section className="card">
+                <div className="card-h"><span className="eyebrow">Latest Strava</span><span className="pill">{latestRun.type}</span></div>
+                <div className="h3">{latestRun.name}</div>
+                <div className="meta">
+                  {latestRun.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).replace(",", "")}
+                  {latestRun.distanceM ? ` · ${(latestRun.distanceM / 1000).toFixed(1)} km` : ""}
+                  {latestRun.movingTimeSec ? ` · ${Math.floor(latestRun.movingTimeSec / 60)} min` : ""}
+                  {latestRun.avgHeartRate ? ` · ${latestRun.avgHeartRate} bpm` : ""}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

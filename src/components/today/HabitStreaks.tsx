@@ -82,7 +82,7 @@ export default function HabitStreaks({ logs, today }: Props) {
 
   function DayCells({ week, h, stretch }: { week: typeof weeks[0]; h: typeof HABITS[0]; stretch?: boolean }) {
     return (
-      <div style={{ display: "grid", gridTemplateColumns: stretch ? "repeat(7, 1fr)" : `repeat(7, ${CELL}px)`, gap: GAP, width: stretch ? "100%" : undefined }}>
+      <div style={{ display: "grid", gridTemplateColumns: stretch ? "repeat(7, minmax(0, 1fr))" : `repeat(7, ${CELL}px)`, gap: GAP, width: stretch ? "100%" : undefined }}>
         {week.days.map((day, di) => {
           const log = logMap.get(day.dateStr);
           const done = log?.[h.field] === true;
@@ -90,16 +90,15 @@ export default function HabitStreaks({ logs, today }: Props) {
           return (
             <div key={di} style={{ display: "flex", justifyContent: "center" }}>
               <div style={{
-                width: CELL, height: CELL, borderRadius: 8,
+                width: stretch ? "100%" : CELL, maxWidth: CELL, aspectRatio: "1", borderRadius: 6,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 background: isFut ? "var(--bg-subtle)" : done ? h.color : day.isToday ? "var(--surface)" : "var(--bg-subtle)",
                 border: isFut
                   ? "1.5px dashed var(--border)"
                   : done ? "none"
-                  : day.isToday ? "2px dashed " + h.color + "70"
+                  : day.isToday ? "1.5px dashed var(--ink-4)"
                   : "1.5px solid var(--border-light)",
                 opacity: isFut ? 0.4 : 1,
-                boxShadow: done ? "0 1px 4px " + h.color + "40" : "none",
               }}>
                 {done && (
                   <svg width="14" height="14" viewBox="0 0 14 14">
@@ -116,11 +115,11 @@ export default function HabitStreaks({ logs, today }: Props) {
 
   function DayHeaders({ week, stretch }: { week: typeof weeks[0]; stretch?: boolean }) {
     return (
-      <div style={{ display: "grid", gridTemplateColumns: stretch ? "repeat(7, 1fr)" : `repeat(7, ${CELL}px)`, gap: GAP, width: stretch ? "100%" : undefined }}>
+      <div style={{ display: "grid", gridTemplateColumns: stretch ? "repeat(7, minmax(0, 1fr))" : `repeat(7, ${CELL}px)`, gap: GAP, width: stretch ? "100%" : undefined }}>
         {DAY_LABELS.map((d, di) => {
           const day = week.days[di];
           return (
-            <div key={di} style={{ textAlign: "center", width: CELL }}>
+            <div key={di} style={{ textAlign: "center", width: stretch ? "100%" : CELL }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: day.isToday ? "var(--c-today)" : "var(--text-4)" }}>{d}</div>
               <div style={{ fontSize: 10, color: day.isToday ? "var(--c-today)" : "var(--text-4)", opacity: 0.6, marginTop: 1 }}>{day.date}</div>
             </div>
@@ -140,11 +139,8 @@ export default function HabitStreaks({ logs, today }: Props) {
     }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h2 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>Habit Streaks</h2>
-        <span style={{
-          fontSize: 12, fontWeight: 600, color: "var(--c-today)",
-          background: "var(--c-today-bg)", padding: "4px 12px", borderRadius: 20,
-        }}>
+        <span className="eyebrow">Habit streaks</span>
+        <span className="pill">
           {activeCount} / {HABITS.length} active
         </span>
       </div>

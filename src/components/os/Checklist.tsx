@@ -8,9 +8,10 @@ interface Props {
   items: ChecklistItem[];
   initialDone: Record<string, boolean>;
   columns?: 1 | 2;
+  hideCount?: boolean;
 }
 
-export default function Checklist({ listKey, items, initialDone, columns = 1 }: Props) {
+export default function Checklist({ listKey, items, initialDone, columns = 1, hideCount = false }: Props) {
   const [done, setDone] = useState<Record<string, boolean>>(initialDone);
 
   async function toggle(id: string) {
@@ -32,33 +33,20 @@ export default function Checklist({ listKey, items, initialDone, columns = 1 }: 
 
   return (
     <div>
-      <div
-        className={columns === 2 ? "os-two-col" : undefined}
-        style={{ display: "grid", gridTemplateColumns: columns === 2 ? "1fr 1fr" : "1fr", gap: "0 20px" }}
+      <ul
+        className={`check${columns === 2 ? " os-two-col" : ""}`}
+        style={columns === 2 ? { display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 20 } : undefined}
       >
-        {items.map(item => {
-          const isDone = !!done[item.id];
-          return (
-            <label key={item.id} style={{
-              display: "flex", alignItems: "flex-start", gap: 9, padding: "6px 0",
-              borderBottom: "1px dashed var(--border)", fontSize: 13, cursor: "pointer",
-              color: isDone ? "var(--text-4)" : "var(--text-1)",
-              textDecoration: isDone ? "line-through" : "none",
-            }}>
-              <input
-                type="checkbox"
-                checked={isDone}
-                onChange={() => toggle(item.id)}
-                style={{ marginTop: 3, flexShrink: 0, accentColor: "var(--c-fitness)" }}
-              />
-              <span style={{ lineHeight: 1.4 }}>{item.label}</span>
+        {items.map(item => (
+          <li key={item.id}>
+            <label style={{ display: "contents", cursor: "pointer" }}>
+              <input type="checkbox" checked={!!done[item.id]} onChange={() => toggle(item.id)} />
+              <span>{item.label}</span>
             </label>
-          );
-        })}
-      </div>
-      <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 8 }}>
-        {doneCount} of {items.length} done
-      </div>
+          </li>
+        ))}
+      </ul>
+      {!hideCount && <div className="meta" style={{ marginTop: 8 }}>{doneCount} of {items.length} done</div>}
     </div>
   );
 }

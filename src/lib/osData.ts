@@ -13,10 +13,20 @@ export const OS = {
   raceDay: "2027-01-17",
 
   modes: {
-    skeleton: { label: "Skeleton mode", hint: "Separation light · front-load ElevenLabs, demo pipeline, cost/min, money work" },
-    block:    { label: "Block mode",    hint: "Separation + marathon. Everything else minimal. Lights out 22:00." },
-    post:     { label: "Post-race",     hint: "Recover, then restart side streams" },
-  } satisfies Record<Mode, { label: string; hint: string }>,
+    skeleton: { label: "Skeleton mode", hint: "Separation light · front-load ElevenLabs, demo pipeline, cost/min, money work",
+                rules: "Separation bounded to 45 min · 10–12 protected · research Tue/Thu only · lights out 22:30" },
+    block:    { label: "Block mode",    hint: "Separation + marathon. Everything else minimal. Lights out 22:00.",
+                rules: "Separation deep work 9–11 · Box paused · reading only · lights out 22:00" },
+    post:     { label: "Post-race",     hint: "Recover, then restart side streams",
+                rules: "Recover first · restart side streams one at a time" },
+  } satisfies Record<Mode, { label: string; hint: string; rules: string }>,
+
+  // The five numbers on Today. Three are logged over WhatsApp as Metric rows.
+  numbers: {
+    reliance: { label: "Reliance",   unit: "min/day", baseline: 20, note: "on v2 fixes" },
+    demos:    { label: "Demos / wk", unit: "of 3",    target: 3,    note: "pipeline live 7 Oct" },
+    ferritin: { label: "Ferritin",   unit: "ng/mL",   panelCountdownId: "blood-panel", note: "Jun: low" },
+  },
 
   rules: [
     "Run before work, sleep before 22:30. Everything else is negotiable; these two are the floor.",

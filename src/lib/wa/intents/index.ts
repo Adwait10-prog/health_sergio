@@ -6,6 +6,7 @@ import { queryMemory, queryRun, queryToday, queryWeek } from "./queries";
 import { rescheduleSession, skipSession } from "./training";
 import { createAsanaTask } from "./asana";
 import { draftEod } from "./eod";
+import { logMetric } from "./metrics";
 
 const unknown: Handler = async (ctx, parsed) => {
   await ctx.reply(parsed.reply || FALLBACK_REPLY);
@@ -24,5 +25,6 @@ export const handlers: Record<Intent, Handler> = {
   skip_session: skipSession,
   create_asana_task: createAsanaTask,
   draft_eod: draftEod,
+  log_metric: logMetric,
   unknown,
 };
