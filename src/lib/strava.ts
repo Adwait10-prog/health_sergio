@@ -5,8 +5,11 @@ const STRAVA_CLIENT_ID     = process.env.STRAVA_CLIENT_ID!;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET!;
 const STRAVA_REDIRECT_URI  = process.env.STRAVA_REDIRECT_URI!;
 
-export function stravaAuthUrl(): string {
+export const STRAVA_STATE_COOKIE = "strava_oauth_state";
+
+export function stravaAuthUrl(state: string): string {
   const params = new URLSearchParams({
+    state,
     client_id:     STRAVA_CLIENT_ID,
     redirect_uri:  STRAVA_REDIRECT_URI,
     response_type: "code",

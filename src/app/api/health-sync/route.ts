@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getUserId } from "@/lib/user";
+import { hasSecret } from "@/lib/auth";
 
 interface MetricEntry { date: string; qty?: number | number[]; asleep?: number | number[] }
 
@@ -27,13 +28,6 @@ interface Metric      { name: string; units?: string; data: MetricEntry[] }
 interface HealthExportPayload { data: { metrics: Metric[] } }
 // Flat format from iOS Shortcuts: { metric_name: [{date, qty}], ... }
 type ShortcutsPayload = Record<string, MetricEntry[]>;
-
-// Debug: GET returns last received payload
-let lastPayload: unknown = null;
-let lastParsed: unknown = null;
-export async function GET() {
-  return NextResponse.json({ lastPayload, lastParsed });
-}
 
 function parseDateToIST(rawDate: string): string {
   // Handle multiple date formats: "2026-05-25", "2026-05-25 07:30:00", "Tue, 26 May 2026 00:07:10 +0530"
@@ -75,14 +69,12 @@ function processMetric(
 
 export async function POST(req: NextRequest) {
   // Validate shared secret
-  const token = req.headers.get("x-health-sync-token");
-  if (token !== process.env.HEALTH_SYNC_TOKEN) {
+  if (!hasSecret(req.headers.get("x-health-sync-token"), "HEALTH_SYNC_TOKEN")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const rawText = await req.text();
-  console.log("health-sync raw body:", rawText.substring(0, 500));
-  lastPayload = rawText;
+  console.log("health-sync: received", rawText.length, "bytes");
 
   // iOS Shortcuts can produce newline-separated numbers inside JSON arrays,
   // e.g. [100.19\n73.83\n56.30] — replace newlines inside brackets with commas.
@@ -96,9 +88,8 @@ export async function POST(req: NextRequest) {
   let body: HealthExportPayload | ShortcutsPayload;
   try {
     body = JSON.parse(sanitized) as HealthExportPayload | ShortcutsPayload;
-    lastParsed = body;
   } catch (e) {
-    console.error("JSON parse failed:", e, "sanitized:", sanitized.substring(0, 300));
+    console.error("health-sync: JSON parse failed", e instanceof Error ? e.message : e);
     return NextResponse.json({ error: "Invalid JSON", received: rawText.substring(0, 200) }, { status: 400 });
   }
 
@@ -126,7 +117,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  console.log("health-sync updates computed:", JSON.stringify(updates));
+  console.log("health-sync: days to update", Object.keys(updates).length);
 
   let upserted = 0;
   const errors: string[] = [];
@@ -135,7 +126,6 @@ export async function POST(req: NextRequest) {
     // Store as midnight IST = 18:30 UTC previous day (matches rest of app)
     const [y, m, d] = dateStr.split("-").map(Number);
     const date = new Date(Date.UTC(y, m - 1, d) - 5.5 * 60 * 60 * 1000); // midnight IST in UTC
-    console.log("upserting", dateStr, "→", date.toISOString(), data);
     try {
       await db.dailyLog.upsert({
         where:  { userId_date: { userId, date } },

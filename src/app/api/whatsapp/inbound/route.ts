@@ -13,11 +13,30 @@ import { subDays, addDays, getDay } from "date-fns";
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 // Empty TwiML response — tells Twilio "got it, no reply from webhook"
-// We send replies via the REST API (sendReply), not via TwiML body
-const TWIML_OK = new NextResponse("<Response></Response>", {
+// We send replies via the REST API (sendReply), not via TwiML body.
+// A fresh Response per call: a body can only be consumed once.
+const twimlOk = () => new NextResponse("<Response></Response>", {
   status: 200,
   headers: { "Content-Type": "text/xml" },
 });
+
+const USER_WHATSAPP = process.env.USER_WHATSAPP;
+
+// The exact URL Twilio signed. PUBLIC_BASE_URL wins; otherwise rebuild it from the proxy headers.
+function signedUrl(req: NextRequest): string {
+  const base = process.env.PUBLIC_BASE_URL
+    ?? `${req.headers.get("x-forwarded-proto") ?? "https"}://${req.headers.get("x-forwarded-host") ?? req.headers.get("host")}`;
+  return `${base.replace(/\/$/, "")}${req.nextUrl.pathname}${req.nextUrl.search}`;
+}
+
+function isTwilioMediaUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && u.hostname === "api.twilio.com";
+  } catch {
+    return false;
+  }
+}
 
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
@@ -59,14 +78,36 @@ function resolveDay(dayStr: string, today: Date): Date | null {
 }
 
 export async function POST(req: NextRequest) {
-  const formData = await req.formData();
-  const from    = formData.get("From") as string;
-  const body    = (formData.get("Body") as string ?? "").trim();
-  const mediaUrl = formData.get("MediaUrl0") as string | null;
+  // 1. Twilio signature — proves the request came from Twilio (needs the raw form body)
+  const raw = await req.text();
+  const params = Object.fromEntries(new URLSearchParams(raw));
+  const signature = req.headers.get("x-twilio-signature") ?? "";
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!authToken || !twilio.validateRequest(authToken, signature, signedUrl(req), params)) {
+    console.warn("WhatsApp inbound: rejected, bad Twilio signature");
+    return new NextResponse("forbidden", { status: 403 });
+  }
 
-  console.log("WhatsApp inbound:", { from, body: body.slice(0, 100), mediaUrl });
+  const sid      = params.MessageSid ?? "?";
+  const from     = params.From ?? "";
+  const body     = (params.Body ?? "").trim();
+  const mediaUrl = params.MediaUrl0 || null;
 
-  if (!body && !mediaUrl) return TWIML_OK;
+  // 2. Owner check — single-user system, only the owner's number may act
+  if (!USER_WHATSAPP || from !== USER_WHATSAPP) {
+    console.warn("WhatsApp inbound: ignored non-owner sender", { sid });
+    return twimlOk();
+  }
+
+  // 3. Media allowlist — Twilio credentials are only ever sent to Twilio
+  if (mediaUrl && !isTwilioMediaUrl(mediaUrl)) {
+    console.warn("WhatsApp inbound: ignored non-Twilio media URL", { sid });
+    return twimlOk();
+  }
+
+  console.log("WhatsApp inbound:", { sid, chars: body.length, hasMedia: !!mediaUrl });
+
+  if (!body && !mediaUrl) return twimlOk();
 
   const userId = getUserId();
   const today  = todayIST();
@@ -78,13 +119,12 @@ export async function POST(req: NextRequest) {
 
       let transcript: string;
       try {
-        const mediaContentType = formData.get("MediaContentType0") as string | null ?? undefined;
-        transcript = await transcribeWhatsAppAudio(mediaUrl, mediaContentType);
-        console.log("Transcript:", transcript.slice(0, 200));
+        transcript = await transcribeWhatsAppAudio(mediaUrl, params.MediaContentType0 || undefined);
+        console.log("Transcript chars:", transcript.length, { sid });
       } catch (e) {
         console.error("Transcription error:", e);
         await sendReply(from, "Sorry, couldn't transcribe that. Try again or just type it out 🙂");
-        return TWIML_OK;
+        return twimlOk();
       }
 
       const parsed = await parseVoiceTranscript(transcript);
@@ -182,11 +222,11 @@ export async function POST(req: NextRequest) {
       }
 
       await sendReply(from, parsed.reply);
-      return TWIML_OK;
+      return twimlOk();
     }
 
     const parsed = await parseWhatsAppMessage(body);
-    console.log("Parsed intent:", parsed.intent, JSON.stringify(parsed.data).slice(0, 200));
+    console.log("Parsed intent:", parsed.intent, { sid });
 
     switch (parsed.intent) {
 
@@ -828,11 +868,11 @@ ${context}`,
       }
     }
 
-    return TWIML_OK;
+    return twimlOk();
 
   } catch (e) {
     console.error("WhatsApp handler error:", e);
     await sendReply(from, "⚠️ Something went wrong. Try again in a moment.").catch(() => {});
-    return TWIML_OK;
+    return twimlOk();
   }
 }

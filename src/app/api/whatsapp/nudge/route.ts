@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hasBearer } from "@/lib/auth";
 import twilio from "twilio";
 import { shouldSendNudge, isSundayIST } from "@/lib/briefData";
 
@@ -12,8 +13,7 @@ const USER_WHATSAPP = process.env.USER_WHATSAPP!;
 
 export async function GET(req: NextRequest) {
   // Verify cron secret
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasBearer(req, "CRON_SECRET")) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       body: message,
     });
 
-    console.log("Evening nudge sent:", message.slice(0, 100));
+    console.log("Evening nudge sent:", message.length, "chars");
     return NextResponse.json({ ok: true, sent: true, preview: message.slice(0, 100) });
   } catch (e) {
     console.error("Evening nudge error:", e);

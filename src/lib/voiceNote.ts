@@ -9,7 +9,11 @@ export async function transcribeWhatsAppAudio(
   mediaUrl: string,
   contentType?: string
 ): Promise<string> {
-  // Twilio media URLs require Basic auth
+  // Twilio media URLs require Basic auth — never send these credentials anywhere but Twilio
+  const target = new URL(mediaUrl);
+  if (target.protocol !== "https:" || target.hostname !== "api.twilio.com") {
+    throw new Error("Refusing to fetch media from a non-Twilio host");
+  }
   const auth = Buffer.from(
     `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
   ).toString("base64");

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hasBearer } from "@/lib/auth";
 import twilio from "twilio";
 import {
   fetchBriefData,
@@ -18,8 +19,7 @@ const USER_WHATSAPP = process.env.USER_WHATSAPP!;
 
 export async function GET(req: NextRequest) {
   // Verify cron secret
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasBearer(req, "CRON_SECRET")) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -30,12 +30,12 @@ export async function GET(req: NextRequest) {
       // Sunday: combined brief + weekly coach review
       const data = await fetchWeekReviewData();
       message = await generateSundayBrief(data);
-      console.log("Sunday brief sent:", message.slice(0, 100));
+      console.log("Sunday brief sent:", message.length, "chars");
     } else {
       // Mon–Sat: regular morning brief
       const data = await fetchBriefData();
       message = await generateMorningBrief(data);
-      console.log("Morning brief sent:", message.slice(0, 100));
+      console.log("Morning brief sent:", message.length, "chars");
     }
 
     await twilioClient.messages.create({

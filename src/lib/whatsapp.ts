@@ -229,7 +229,6 @@ export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage>
     });
 
     const raw = (response.content[0] as { text: string }).text.trim();
-    console.log("WhatsApp raw response:", raw.slice(0, 300));
     const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) ?? [null, raw];
     const parsed = JSON.parse(jsonMatch[1] ?? raw) as ParsedMessage;
     console.log("WhatsApp parsed intent:", parsed.intent);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hasBearer } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   getMe,
@@ -11,8 +12,7 @@ import {
 // Also generates the rian-asana-seed.md knowledge file
 // Protected by CRON_SECRET
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!hasBearer(req, "CRON_SECRET")) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
