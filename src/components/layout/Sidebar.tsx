@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/",           label: "Today",      icon: "⊞", accent: "var(--c-today)",      bg: "var(--c-today-bg)" },
+  { href: "/os",         label: "OS",         icon: "◈", accent: "var(--c-today)",      bg: "var(--c-today-bg)" },
   { href: "/fitness",    label: "Fitness",    icon: "◎", accent: "var(--c-fitness)",     bg: "var(--c-fitness-bg)" },
   { href: "/technical",  label: "Technical",  icon: "</>", accent: "var(--c-technical)", bg: "var(--c-technical-bg)" },
   { href: "/work",       label: "Work",       icon: "⬡", accent: "var(--c-technical)",  bg: "var(--c-technical-bg)" },

@@ -427,3 +427,21 @@ model RoadmapSnapshot {
 
   @@index([themeId, capturedAt])
 }
+
+// Adwait OS page — tick state for the checklists (items defined in src/lib/osData.ts)
+model OsChecklistItem {
+  id        String   @id @default(cuid())
+  listKey   String   // "open" | "ftm"
+  itemId    String   // stable slug from osData.ts
+  done      Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@unique([listKey, itemId])
+}
+
+// Adwait OS page — free-text notes (e.g. key "three" = today's three)
+model OsNote {
+  key       String   @id
+  text      String
+  updatedAt DateTime @updatedAt
+}

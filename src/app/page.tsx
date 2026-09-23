@@ -16,6 +16,9 @@ import CoachBriefModal from "@/components/modals/CoachBriefModal";
 import ImportResponseModal from "@/components/modals/ImportResponseModal";
 import LiveClock from "@/components/today/LiveClock";
 import FitnessPanel from "@/components/today/FitnessPanel";
+import TodaysThree from "@/components/os/TodaysThree";
+import { OS } from "@/lib/osData";
+import { computeMode, nextCountdown } from "@/lib/osLogic";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +64,7 @@ export default async function TodayPage() {
     last7Strava, last28Strava,
     last35Reflections,
     wipTasks,
+    osThree,
   ] = await Promise.all([
     db.dailyLog.findFirst({ where: { userId, date: todayDB } }),
     db.dailyLog.findFirst({ where: { userId, date: yesterdayDB } }),
@@ -84,7 +88,13 @@ export default async function TodayPage() {
       take: 5,
       select: { asanaGid: true, name: true, sectionName: true, dueOn: true, permalink: true, project: { select: { name: true } } },
     }),
+    db.osNote.findUnique({ where: { key: "three" } }),
   ]);
+
+  // Adwait OS strip — mode + next countdown (today is already midnight-IST-as-UTC)
+  const osMode = computeMode(today);
+  const osNext = nextCountdown(today);
+  const OS_MODE_COLOR = { skeleton: "var(--c-technical)", block: "var(--warn)", post: "var(--c-fitness)" } as const;
 
   // last7 slices for score enrichment
   const last7TechLogs    = last35TechLogs.filter(l => l.date >= last7Start);
@@ -289,6 +299,25 @@ export default async function TodayPage() {
 
         {/* Right sidebar — scrolls with page, stacks all the info cards */}
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* Adwait OS — mode + today's three */}
+          <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: 6, fontWeight: 700, fontSize: 10.5, letterSpacing: ".05em", textTransform: "uppercase", color: "#fff", background: OS_MODE_COLOR[osMode] }}>
+                {OS.modes[osMode].label}
+              </span>
+              <Link href="/os" style={{ fontSize: 11, color: "var(--text-4)", textDecoration: "none" }}>Open OS →</Link>
+            </div>
+            <div style={{ fontSize: 11.5, color: "var(--text-3)", marginBottom: 10, lineHeight: 1.4 }}>{OS.modes[osMode].hint}</div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Today&rsquo;s three</div>
+            <TodaysThree initialText={osThree?.text ?? ""} compact />
+            {osNext && (
+              <div style={{ marginTop: 10, fontSize: 11.5, color: "var(--text-3)" }}>
+                Next: <span style={{ color: "var(--text-1)", fontWeight: 600 }}>{osNext.label}</span>
+                <span style={{ color: osNext.days <= 7 ? "var(--warn)" : osNext.days <= 21 ? "var(--c-today)" : "var(--text-3)", fontWeight: 700 }}> · {osNext.days === 0 ? "today" : `${osNext.days}d`}</span>
+              </div>
+            )}
+          </div>
 
           {/* Race countdown */}
           <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
