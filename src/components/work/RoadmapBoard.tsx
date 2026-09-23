@@ -87,7 +87,7 @@ export default function RoadmapBoard({
 
   return (
     <div style={{ ...DASHBOARD_TOKENS, padding: "32px 40px 80px" }}>
-      <div style={{ maxWidth: 1360, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>

@@ -49,3 +49,9 @@ export function dayMonth(d: string | Date): string {
   const dt = typeof d === "string" ? new Date(d + "T00:00:00Z") : d;
   return `${dt.getUTCDate()} ${MONTHS[dt.getUTCMonth()]}`;
 }
+
+/** "Tue 22 Sep" for any stored instant, read in IST */
+export function istDayLabel(d: Date | string): string {
+  const ist = new Date(new Date(d).getTime() + 5.5 * 60 * 60 * 1000);
+  return `${ist.toUTCString().slice(0, 3)} ${dayMonth(ist)}`;
+}

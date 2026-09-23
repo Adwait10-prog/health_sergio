@@ -100,11 +100,11 @@ export default async function ReflectionPage() {
   const accentColor = "var(--c-reflection)";
 
   return (
-    <div style={{ padding: "24px 20px" }}>
+    <div className="main">
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: accentColor, margin: 0 }}>Reflection</h1>
+        <h1 className="h2" style={{ margin: 0 }}>Reflection</h1>
         <p style={{ fontSize: 13, color: "var(--text-3)", margin: "4px 0 0" }}>Journal · weekly review · monthly identity</p>
       </div>
 
@@ -191,7 +191,7 @@ export default async function ReflectionPage() {
       )}
 
       {/* ── Two-column: form + sidebar ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "start" }}>
+      <div className="rail">
 
         {/* Left — form */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

@@ -202,7 +202,7 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
 
   return (
     <div style={{ ...DASHBOARD_TOKENS, padding: "28px 36px 72px" }}>
-      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+      <div>
 
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap", marginBottom: 22 }}>
@@ -237,7 +237,7 @@ export default function WorkBoard({ projects, members, recentEvents, stats }: Pr
         )}
 
         {/* 3-col grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "236px minmax(0,1fr) 270px", gap: 18, alignItems: "start" }} className="wb-grid">
+        <div style={{ display: "grid", gridTemplateColumns: "clamp(220px,15vw,300px) minmax(0,1fr) clamp(260px,20vw,380px)", gap: 18, alignItems: "start" }} className="wb-grid">
 
           {/* ── Left: projects + standup ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

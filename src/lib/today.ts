@@ -3,7 +3,7 @@
 //   • osLogic: midnight UTC of the IST date (istToday()), for day arithmetic on osData strings
 import { db } from "./db";
 import { getUserId, ASANA_OWNER_GID } from "./user";
-import { todayIST, todayUTC, yesterdayUTC, daysAgoUTC, dayMonth } from "./date";
+import { todayIST, todayUTC, yesterdayUTC, daysAgoUTC, dayMonth, istDayLabel } from "./date";
 import { getTodayHMSession, getCurrentWeekHMStats, getRaceCountdown } from "./hmTracker";
 import { getPatternInsights } from "./patternInsights";
 import { OS } from "./osData";
@@ -196,7 +196,7 @@ export async function loadToday() {
     },
     eod: latestEod ? {
       isToday: latestEod.date.getTime() === todayDB.getTime(),
-      dateLabel: new Date(latestEod.date.getTime() + 5.5 * 3600000).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }),
+      dateLabel: istDayLabel(latestEod.date),
       outcome: latestEod.outcome,
       draft: latestEod.draft,
       final: latestEod.final,

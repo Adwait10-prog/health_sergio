@@ -5,6 +5,7 @@ import type { Handler } from "./types";
 import { db } from "../../db";
 import { generateWeekSummary } from "../../whatsapp";
 import { queryMemory as runMemoryQuery } from "../../memoryQuery";
+import { istDayLabel } from "../../date";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
@@ -104,7 +105,7 @@ export const queryRun: Handler = async (ctx) => {
 
   const context = [
     `Run: ${run.name}`,
-    `Date: ${new Date(run.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" })}`,
+    `Date: ${istDayLabel(run.date)}`,
     distKm             && `Distance: ${distKm} km`,
     movingMin !== null && `Moving time: ${movingMin}m ${movingSec}s`,
     elapsedMin !== null && movingMin !== null && elapsedMin > movingMin && `Elapsed time: ${elapsedMin}m (${elapsedMin - movingMin}m stopped)`,

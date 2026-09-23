@@ -1,6 +1,7 @@
 "use client";
 
 import type { HMSessionWithLog } from "@/lib/hmTracker";
+import { istDayLabel } from "@/lib/date";
 
 // Formatting helpers (inline — avoids importing Node-only strava lib in a client component)
 function formatPace(avgSpeedMps: number): string {
@@ -255,7 +256,7 @@ export default function FitnessPanel({
             const pace = a.avgSpeedMps && a.avgSpeedMps > 0 ? formatPace(a.avgSpeedMps) : null;
             const dist = a.distanceM && a.distanceM > 100 ? formatDistance(a.distanceM) : null;
             const dur = a.movingTimeSec ? formatDuration(a.movingTimeSec) : null;
-            const dateLabel = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short" }).format(new Date(a.date));
+            const dateLabel = istDayLabel(a.date);
             return (
               <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border-light)" }}>
                 <span style={{

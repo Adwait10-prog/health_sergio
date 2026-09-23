@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { loadToday } from "@/lib/today";
 import { OS } from "@/lib/osData";
-import { dayMonth } from "@/lib/date";
+import { dayMonth, istDayLabel } from "@/lib/date";
 import StatBox, { Spark } from "@/components/today/StatBox";
 import OutcomeCard, { DraftEodButton } from "@/components/today/OutcomeCard";
 import ThreeChecklist from "@/components/today/ThreeChecklist";
@@ -246,7 +246,7 @@ export default async function TodayPage() {
                 <div className="card-h"><span className="eyebrow">Latest Strava</span><span className="pill">{latestRun.type}</span></div>
                 <div className="h3">{latestRun.name}</div>
                 <div className="meta">
-                  {latestRun.date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).replace(",", "")}
+                  {istDayLabel(latestRun.date)}
                   {latestRun.distanceM ? ` · ${(latestRun.distanceM / 1000).toFixed(1)} km` : ""}
                   {latestRun.movingTimeSec ? ` · ${Math.floor(latestRun.movingTimeSec / 60)} min` : ""}
                   {latestRun.avgHeartRate ? ` · ${latestRun.avgHeartRate} bpm` : ""}

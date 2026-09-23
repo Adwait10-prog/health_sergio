@@ -43,14 +43,14 @@ export default async function TechnicalPage() {
   ];
 
   return (
-    <div style={{ padding: "24px 20px" }}>
+    <div className="main">
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--technical)", margin: 0 }}>Technical</h1>
+        <h1 className="h2" style={{ margin: 0 }}>Technical</h1>
         <p style={{ fontSize: 13, marginTop: 2, color: "var(--text-muted)", margin: "2px 0 0" }}>This week's output</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 16, alignItems: "start" }}>
+      <div className="rail">
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
           {/* CTO score + counters */}

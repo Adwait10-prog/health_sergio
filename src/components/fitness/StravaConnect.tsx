@@ -42,13 +42,7 @@ export default function StravaConnect({ connected }: Props) {
     return (
       <a
         href="/api/strava/connect"
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "6px 14px", borderRadius: 8,
-          background: "#FC4C02", color: "#fff",
-          fontSize: 13, fontWeight: 600, textDecoration: "none",
-          boxShadow: "0 1px 4px rgba(252,76,2,0.3)",
-        }}
+        className="btn sm primary"
       >
         <StravaIcon />
         Connect Strava
@@ -59,24 +53,15 @@ export default function StravaConnect({ connected }: Props) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       {syncMsg && (
-        <span style={{ fontSize: 12, color: syncMsg.startsWith("Error") ? "var(--c-warn)" : "var(--c-fitness)", fontWeight: 500 }}>
+        <span style={{ fontSize: 12, color: syncMsg.startsWith("Error") ? "var(--act)" : "var(--ink-3)", fontWeight: 500 }}>
           {syncMsg}
         </span>
       )}
       <button
         onClick={sync}
         disabled={syncing}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 6,
-          padding: "6px 14px", borderRadius: 8, cursor: syncing ? "not-allowed" : "pointer",
-          background: syncing ? "var(--bg-subtle)" : "#FC4C02",
-          color: syncing ? "var(--text-3)" : "#fff",
-          border: syncing ? "1px solid var(--border)" : "1px solid transparent",
-          fontSize: 13, fontWeight: 600,
-          boxShadow: syncing ? "none" : "0 1px 4px rgba(252,76,2,0.3)",
-          transition: "all 0.15s",
-          opacity: syncing ? 0.7 : 1,
-        }}
+        className="btn sm primary"
+        style={{ opacity: syncing ? 0.6 : 1, cursor: syncing ? "not-allowed" : "pointer" }}
       >
         <span style={{
           display: "inline-block",

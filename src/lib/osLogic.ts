@@ -46,7 +46,3 @@ export function nextCountdown(today: Date): { label: string; days: number } | nu
     .sort((a, b) => a.days - b.days);
   return upcoming[0] ?? null;
 }
-
-export function formatIST(today: Date): string {
-  return today.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-}

@@ -98,7 +98,7 @@ export default function AnalysisBoard({ tickets, totalIncomplete }: { tickets: M
 
   return (
     <div style={{ ...DASHBOARD_TOKENS, padding: "32px 40px 80px" }}>
-      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      <div>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
           <div>

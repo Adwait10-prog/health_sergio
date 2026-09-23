@@ -11,19 +11,19 @@ export const dynamic = "force-dynamic";
 
 // ── Type helpers ──────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  gym_lc:       { bg: "#FEF3C7", text: "#B45309", label: "Gym LC"    },
-  gym_ub:       { bg: "#FEF3C7", text: "#B45309", label: "Gym UB"    },
-  gym_fb_light: { bg: "#FEF7E0", text: "#B45309", label: "Gym FB"    },
-  easy:         { bg: "#D1FAE5", text: "#065F46", label: "Easy"      },
-  quality:      { bg: "#A7F3D0", text: "#065F46", label: "Quality"   },
-  long:         { bg: "#16A34A", text: "#FFFFFF", label: "Long"      },
-  swim:         { bg: "#DBEAFE", text: "#2563EB", label: "Swim"      },
-  rest:         { bg: "#F0F3F8", text: "#94A3B8", label: "Rest"      },
-  race:         { bg: "#16A34A", text: "#FFFFFF", label: "Race"      },
+  gym_lc:       { bg: "var(--watch-soft)", text: "var(--watch)", label: "Gym LC"  },
+  gym_ub:       { bg: "var(--watch-soft)", text: "var(--watch)", label: "Gym UB"  },
+  gym_fb_light: { bg: "var(--watch-soft)", text: "var(--watch)", label: "Gym FB"  },
+  easy:         { bg: "var(--ok-soft)",    text: "var(--ok)",    label: "Easy"    },
+  quality:      { bg: "var(--ok-soft)",    text: "var(--ok)",    label: "Quality" },
+  long:         { bg: "var(--ink)",        text: "var(--bg)",    label: "Long"    },
+  swim:         { bg: "var(--info-soft)",  text: "var(--info)",  label: "Swim"    },
+  rest:         { bg: "var(--surface-2)",  text: "var(--ink-4)", label: "Rest"    },
+  race:         { bg: "var(--accent)",     text: "var(--accent-ink)", label: "Race" },
 };
 
 function typeChip(type: string) {
-  const c = TYPE_COLORS[type] ?? { bg: "#F0F3F8", text: "#94A3B8", label: type };
+  const c = TYPE_COLORS[type] ?? { bg: "var(--surface-2)", text: "var(--ink-4)", label: type };
   return (
     <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 20, background: c.bg, color: c.text }}>
       {c.label}
@@ -32,7 +32,7 @@ function typeChip(type: string) {
 }
 
 function StatusDot({ status }: { status: string | null }) {
-  const color = status === "done" ? "#22C55E" : status === "partial" ? "#FBBF24" : status === "skipped" ? "#FB923C" : "var(--border)";
+  const color = status === "done" ? "var(--ok)" : status === "partial" ? "var(--watch)" : status === "skipped" ? "var(--act)" : "var(--border)";
   return <span style={{ display: "inline-block", width: 9, height: 9, borderRadius: "50%", background: color, flexShrink: 0 }} />;
 }
 
@@ -111,12 +111,12 @@ export default async function FitnessPage() {
   };
 
   return (
-    <div style={{ padding: "24px 28px", maxWidth: 1100 }}>
+    <div className="main">
 
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--c-fitness)", margin: 0 }}>Fitness</h1>
+          <h1 className="h2" style={{ margin: 0 }}>Fitness</h1>
           <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 2 }}>
             Wk {weekStats.weekNum} of 24 · Vedanta Delhi Half Marathon
           </p>
@@ -126,11 +126,7 @@ export default async function FitnessPage() {
           {stravaConnected && (
             <a
               href="/api/strava/sync"
-              style={{
-                fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: "var(--radius-sm)",
-                background: "var(--c-fitness-bg)", color: "var(--c-fitness)",
-                border: "1px solid #A7E3BC", textDecoration: "none",
-              }}
+              className="btn sm"
             >
               ↻ Sync
             </a>
@@ -139,10 +135,10 @@ export default async function FitnessPage() {
       </div>
 
       {/* ── 2-col layout ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 272px", gap: 16 }}>
+      <div className="rail">
 
         {/* ══ LEFT: analytics ══ */}
-        <div>
+        <div style={{ minWidth: 0 }}>
           <FitnessCharts
             activities={activitiesForChart}
             weekBuckets={weekBuckets}
@@ -155,31 +151,27 @@ export default async function FitnessPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "sticky", top: 24, alignSelf: "start" }}>
 
           {/* Race countdown */}
-          <div style={{ ...card, padding: 18, background: "var(--c-fitness-bg)", border: "1px solid #A7E3BC" }}>
+          <div style={{ ...card, padding: 18 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--c-fitness)" }}>
-                Race day
-              </span>
-              <span style={{ fontSize: 11, color: "var(--c-fitness)", opacity: 0.7 }}>18 Oct 2026</span>
+              <span className="eyebrow">Race day</span>
+              <span className="meta num">18 Oct 2026</span>
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
-              <span style={{ fontSize: 36, fontWeight: 800, color: "var(--c-fitness)", lineHeight: 1 }}>{daysToRace}</span>
-              <span style={{ fontSize: 13, color: "var(--c-fitness)", opacity: 0.8 }}>days to go</span>
+              <span className="stat">{daysToRace}</span>
+              <span className="meta">days to go</span>
             </div>
-            <div style={{ fontSize: 11, color: "var(--c-fitness)", marginBottom: 8, opacity: 0.8 }}>Vedanta Delhi Half Marathon</div>
+            <div className="meta" style={{ marginBottom: 8 }}>Vedanta Delhi Half Marathon</div>
             {/* Progress bar */}
-            <div style={{ height: 5, background: "rgba(36,139,82,0.15)", borderRadius: 3 }}>
-              <div style={{ width: `${racePct}%`, height: "100%", background: "var(--c-fitness)", borderRadius: 3, transition: "width 1s ease" }} />
-            </div>
+            <div className="bar"><i style={{ width: `${racePct}%` }} /></div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span style={{ fontSize: 9, color: "var(--c-fitness)", opacity: 0.6 }}>Training started</span>
-              <span style={{ fontSize: 9, fontWeight: 700, color: "var(--c-fitness)" }}>{racePct}%</span>
+              <span className="meta">Training started</span>
+              <span className="meta num">{racePct}%</span>
             </div>
           </div>
 
           {/* Today's session */}
           <div style={card}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-4)", margin: "0 0 12px" }}>
+            <p className="eyebrow" style={{ margin: "0 0 12px" }}>
               Today · Wk {weekStats.weekNum}
             </p>
             {today ? (
@@ -199,13 +191,13 @@ export default async function FitnessPage() {
                   {today.logStatus ? (
                     <span style={{
                       fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, flexShrink: 0,
-                      background: today.logStatus === "done" ? "var(--c-fitness-bg)" : today.logStatus === "partial" ? "#FBF3E2" : "var(--bg-subtle)",
+                      background: today.logStatus === "done" ? "var(--ok-soft)" : today.logStatus === "partial" ? "var(--watch-soft)" : "var(--surface-2)",
                       color: today.logStatus === "done" ? "var(--c-fitness)" : today.logStatus === "partial" ? "var(--c-today)" : "var(--text-4)",
                     }}>
                       {today.logStatus === "done" ? "✓ Done" : today.logStatus === "partial" ? "~ Partial" : "Skipped"}
                     </span>
                   ) : (
-                    <a href="/log" style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 20, background: "var(--c-fitness)", color: "#fff", textDecoration: "none", flexShrink: 0 }}>
+                    <a href="/log" className="btn sm primary" style={{ flexShrink: 0 }}>
                       Log →
                     </a>
                   )}
@@ -218,12 +210,12 @@ export default async function FitnessPage() {
 
           {/* Week strip */}
           <div style={card}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-4)", margin: "0 0 12px" }}>
+            <p className="eyebrow" style={{ margin: "0 0 12px" }}>
               This week
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
               {weekStats.sessions.map((s, i) => {
-                const c = TYPE_COLORS[s.type] ?? { bg: "#F0F3F8", text: "#94A3B8" };
+                const c = TYPE_COLORS[s.type] ?? { bg: "var(--surface-2)", text: "var(--ink-4)" };
                 return (
                   <div key={s.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
                     <div style={{ width: "100%", borderRadius: 6, padding: "5px 2px", display: "flex", flexDirection: "column", alignItems: "center", background: c.bg, minHeight: 32, position: "relative", overflow: "hidden" }}>
@@ -240,17 +232,17 @@ export default async function FitnessPage() {
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-light)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
                 <span style={{ fontSize: 11, color: "var(--text-4)" }}>{weekStats.doneKm.toFixed(1)} done</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--c-fitness)" }}>{weekStats.targetKm} km target</span>
+                <span className="num" style={{ fontSize: 11, fontWeight: 600 }}>{weekStats.targetKm} km target</span>
               </div>
               <div style={{ height: 5, background: "var(--bg-subtle)", borderRadius: 3 }}>
-                <div style={{ width: `${weekStats.targetKm > 0 ? Math.min(100, (weekStats.doneKm / weekStats.targetKm) * 100) : 0}%`, height: "100%", background: "var(--c-fitness)", borderRadius: 3 }} />
+                <div style={{ width: `${weekStats.targetKm > 0 ? Math.min(100, (weekStats.doneKm / weekStats.targetKm) * 100) : 0}%`, height: "100%", background: "var(--ink)", borderRadius: 3 }} />
               </div>
             </div>
           </div>
 
           {/* Last 7 days */}
           <div style={card}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-1)", margin: "0 0 12px" }}>Last 7 days</h2>
+            <div className="card-h"><span className="eyebrow">Last 7 days</span></div>
             {last7.length === 0 ? (
               <p style={{ fontSize: 12, color: "var(--text-3)" }}>No sessions found.</p>
             ) : (
@@ -273,7 +265,7 @@ export default async function FitnessPage() {
 
           {/* Recovery snapshot */}
           <div style={card}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-4)", margin: "0 0 12px" }}>
+            <p className="eyebrow" style={{ margin: "0 0 12px" }}>
               Recovery · yesterday
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -281,7 +273,7 @@ export default async function FitnessPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 12, color: "var(--text-3)" }}>Resting HR</span>
                 {latestLog?.rhrBpm ? (
-                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.rhrBpm <= 60 ? "var(--c-fitness)" : latestLog.rhrBpm <= 70 ? "var(--text-1)" : "#F97316" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.rhrBpm <= 60 ? "var(--c-fitness)" : latestLog.rhrBpm <= 70 ? "var(--text-1)" : "var(--act)" }}>
                     {latestLog.rhrBpm} <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}>bpm</span>
                   </span>
                 ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
@@ -290,7 +282,7 @@ export default async function FitnessPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 12, color: "var(--text-3)" }}>HRV</span>
                 {latestLog?.hrvMs ? (
-                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.hrvMs >= 60 ? "var(--c-fitness)" : latestLog.hrvMs >= 40 ? "var(--text-1)" : "#F97316" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.hrvMs >= 60 ? "var(--c-fitness)" : latestLog.hrvMs >= 40 ? "var(--text-1)" : "var(--act)" }}>
                     {latestLog.hrvMs} <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}>ms</span>
                   </span>
                 ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
@@ -317,7 +309,7 @@ export default async function FitnessPage() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 12, color: "var(--text-3)" }}>Sleep</span>
                 {latestLog?.sleepMin ? (
-                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.sleepMin >= 420 ? "var(--c-fitness)" : latestLog.sleepMin >= 360 ? "var(--text-1)" : "#F97316" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: latestLog.sleepMin >= 420 ? "var(--c-fitness)" : latestLog.sleepMin >= 360 ? "var(--text-1)" : "var(--act)" }}>
                     {Math.floor(latestLog.sleepMin / 60)}h {latestLog.sleepMin % 60}m
                   </span>
                 ) : <span style={{ fontSize: 12, color: "var(--text-4)" }}>—</span>}
@@ -341,7 +333,7 @@ export default async function FitnessPage() {
               <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>Open HM Tracker</p>
               <p style={{ fontSize: 11, color: "var(--text-3)", margin: "3px 0 0" }}>Plan · log sessions · coach brief</p>
             </div>
-            <span style={{ fontSize: 16, color: "var(--c-fitness)" }}>→</span>
+            <span style={{ fontSize: 16, color: "var(--ink-3)" }}>→</span>
           </a>
 
         </div>
