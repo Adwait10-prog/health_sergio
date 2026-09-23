@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { getUserId } from "@/lib/user";
+import { getUserId, ASANA_OWNER_GID } from "@/lib/user";
 import { calcDisciplineScore, calcMomentumScore, calcWeeklyCTOScore, calcWeeklyFounderScore } from "@/lib/scores";
 import { startOfDay, startOfWeek, subDays, format } from "date-fns";
 import { todayUTC, yesterdayUTC, daysAgoUTC } from "@/lib/date";
@@ -54,9 +54,6 @@ export default async function TodayPage() {
   const last28DB   = daysAgoUTC(28);
   const last35DB   = daysAgoUTC(35);
 
-  // Adwait's Asana GID — used to filter WIP tasks assigned to him
-  const ADWAIT_GID = "1212972818193396";
-
   const [
     todayLog, yesterdayLog, last7Logs, todayTasks,
     weekTechLogs, weekFounderLogs,
@@ -65,6 +62,7 @@ export default async function TodayPage() {
     last35Reflections,
     wipTasks,
     osThree,
+    recentEods,
   ] = await Promise.all([
     db.dailyLog.findFirst({ where: { userId, date: todayDB } }),
     db.dailyLog.findFirst({ where: { userId, date: yesterdayDB } }),
@@ -79,7 +77,7 @@ export default async function TodayPage() {
     db.reflection.findMany({ where: { userId, type: "daily", date: { gte: last35DB } } }),
     db.asanaTask.findMany({
       where: {
-        assigneeGid: ADWAIT_GID,
+        assigneeGid: ASANA_OWNER_GID,
         status: "incomplete",
         parentGid: null,
         sectionName: { in: ["WIP", "Work in Progress", "In Progress", "Prioritized", "Exploring", "Planning/Scoping"] },
@@ -89,12 +87,19 @@ export default async function TodayPage() {
       select: { asanaGid: true, name: true, sectionName: true, dueOn: true, permalink: true, project: { select: { name: true } } },
     }),
     db.osNote.findUnique({ where: { key: "three" } }),
+    db.eodUpdate.findMany({ where: { date: { gte: daysAgoUTC(30) } }, orderBy: { date: "desc" } }),
   ]);
 
   // Adwait OS strip — mode + next countdown (today is already midnight-IST-as-UTC)
   const osMode = computeMode(today);
   const osNext = nextCountdown(today);
   const OS_MODE_COLOR = { skeleton: "var(--c-technical)", block: "var(--warn)", post: "var(--c-fitness)" } as const;
+
+  // EoD — the daily work record. Latest row (today's, or the most recent before it) + 30-day hit rate.
+  const latestEod = recentEods[0] ?? null;
+  const eodIsToday = !!latestEod && latestEod.date.getTime() === todayDB.getTime();
+  const eodStreams: string[] = (() => { try { return latestEod ? JSON.parse(latestEod.streams) : []; } catch { return []; } })();
+  const eodWithNumber = recentEods.filter(e => /\d/.test(e.outcome)).length;
 
   // last7 slices for score enrichment
   const last7TechLogs    = last35TechLogs.filter(l => l.date >= last7Start);
@@ -214,6 +219,37 @@ export default async function TodayPage() {
           <CoachBriefModal />
           <ImportResponseModal />
         </div>
+      </div>
+
+      {/* ── Outcome: today's EoD headline (the work record) ── */}
+      <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: "18px 22px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap", marginBottom: latestEod ? 8 : 4 }}>
+          <span style={{ fontSize: 10, fontWeight: 600, color: "var(--c-technical)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Outcome · {latestEod ? (eodIsToday ? "today" : format(new Date(latestEod.date.getTime() + 5.5 * 60 * 60 * 1000), "EEE d MMM")) : "today"}
+          </span>
+          <span style={{ fontSize: 11, color: "var(--text-4)" }}>
+            {recentEods.length > 0 ? `${eodWithNumber} of ${recentEods.length} EoDs in 30 days led with a number` : "EoD not started yet"}
+          </span>
+        </div>
+        {latestEod ? (
+          <>
+            <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text-1)", lineHeight: 1.45 }}>{latestEod.outcome}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", marginTop: 10 }}>
+              {eodStreams.map(s => (
+                <span key={s} style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "var(--c-technical-bg)", color: "var(--c-technical)" }}>{s}</span>
+              ))}
+              {!eodIsToday && <span style={{ fontSize: 11, color: "var(--text-4)" }}>Send &ldquo;draft my update&rdquo; on WhatsApp for today&rsquo;s.</span>}
+            </div>
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ fontSize: 11.5, color: "var(--text-3)", cursor: "pointer" }}>Full update</summary>
+              <pre style={{ margin: "8px 0 0", whiteSpace: "pre-wrap", font: "inherit", fontSize: 12.5, lineHeight: 1.55, color: "var(--text-2)", background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px" }}>{latestEod.draft}</pre>
+            </details>
+          </>
+        ) : (
+          <div style={{ fontSize: 13, color: "var(--text-3)" }}>
+            No EoD yet. Around 6pm, send &ldquo;draft my update&rdquo; on WhatsApp (text or voice note, with anything you want included). The outcome line lands here.
+          </div>
+        )}
       </div>
 
       {/* ── Top row: Performance Scores + Apple Watch vitals (same height) ── */}

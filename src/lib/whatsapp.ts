@@ -20,6 +20,7 @@ export interface ParsedMessage {
     | "reschedule_session"   // "swap today's run with tomorrow" / "do tomorrow's workout today"
     | "skip_session"         // "skip today's run" / "rest today instead"
     | "create_asana_task"    // "create a task in asana — fix the login bug" / "add to asana: ..."
+    | "draft_eod"            // "draft my update" / "eod" — compose the evening update for the Rian group
     | "unknown";
   data: Record<string, unknown>;
   reply: string;       // short WhatsApp reply to send back
@@ -38,7 +39,7 @@ CRITICAL CLASSIFICATION RULE:
 
 Respond ONLY with valid JSON:
 {
-  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "reschedule_session" | "skip_session" | "create_asana_task" | "unknown",
+  "intent": one of "journal" | "gratitude" | "lessons" | "mood" | "water" | "habits" | "query_today" | "query_week" | "add_task" | "query_tasks" | "complete_task" | "query_memory" | "query_run" | "reschedule_session" | "skip_session" | "create_asana_task" | "draft_eod" | "unknown",
   "data": {
     // For journal:
     //   journalText: the full journal entry as-is (preserve his words exactly)
@@ -95,6 +96,10 @@ Respond ONLY with valid JSON:
     // For skip_session:
     //   day: "today" | "tomorrow" | "monday" etc — which day's session to skip (default "today")
     //   reason: short reason string if mentioned, else null
+    //
+    // For draft_eod:
+    //   notes: anything he says about what he did or shipped today, preserved verbatim (or null if he only asked for the draft)
+    //   Use this intent when he asks for his end-of-day update: "draft my update", "eod", "write my EoD", "update for the group", "draft today's update"
     //
     // For create_asana_task:
     //   taskTitle: explicit task name if user gave one (e.g. "STS editor features", "fix login redirect"), else null
@@ -210,6 +215,12 @@ Examples:
 - "create ticket named fix dashboard filters in Core Engineering backlog — the date filter doesn't reset when switching views"
   → intent: create_asana_task, taskTitle: "fix dashboard filters", taskDescription: "the date filter doesn't reset when switching views", projectHint: "Core Engineering", sectionHint: "backlog", assigneeHint: null
 
+- "draft my update"
+  → intent: draft_eod, notes: null
+
+- "eod: shipped the v2 download fix, Rohit's team unblocked, reviewed the batch monitor with Saijash"
+  → intent: draft_eod, notes: "shipped the v2 download fix, Rohit's team unblocked, reviewed the batch monitor with Saijash"
+
 - "add a task to Recipe Cloud exploring section: research feasibility of offline mode for the mobile app"
   → intent: create_asana_task, taskTitle: null, taskDescription: "research feasibility of offline mode for the mobile app", projectHint: "Recipe Cloud", sectionHint: "exploring", assigneeHint: null
 
@@ -217,7 +228,8 @@ IMPORTANT: For journal entries, ALWAYS preserve his exact words in journalText. 
 IMPORTANT: For add_task, if he says "today" for dueDate, use today's actual date in ISO format.
 IMPORTANT: reschedule_session means he wants to SWAP or MOVE a session to a different day. skip_session means he wants to mark a session as skipped/rest.
 IMPORTANT: If he mentions doing a specific workout on a different day than planned (e.g. "doing tomorrow's run today", "pulling forward my intervals", "I'll do the long run on Saturday instead"), that is reschedule_session — NOT a journal entry. The key signal is intent to change the schedule, not just narrating what happened.
-IMPORTANT: create_asana_task is ONLY for when he explicitly wants to create a task in Asana (says "create task", "add to asana", "raise a ticket", "create ticket"). A general reminder or personal task goes to add_task instead.`;
+IMPORTANT: create_asana_task is ONLY for when he explicitly wants to create a task in Asana (says "create task", "add to asana", "raise a ticket", "create ticket"). A general reminder or personal task goes to add_task instead.
+IMPORTANT: draft_eod is for composing his work update for the Rian group. A reflection on how the day felt is still journal.`;
 
 export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage> {
   try {

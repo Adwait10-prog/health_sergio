@@ -54,7 +54,7 @@ export async function transcribeWhatsAppAudio(
 }
 
 export interface ParsedVoiceNote {
-  intent: "journal" | "meeting_note" | "task" | "general";
+  intent: "journal" | "meeting_note" | "task" | "eod" | "general";
   // For journal
   journalText?: string;
   moodScore?: number | null;
@@ -81,7 +81,7 @@ export async function parseVoiceTranscript(transcript: string): Promise<ParsedVo
 
 Respond ONLY with valid JSON:
 {
-  "intent": "journal" | "meeting_note" | "task" | "general",
+  "intent": "journal" | "meeting_note" | "task" | "eod" | "general",
 
   // If journal:
   "journalText": "his exact words, preserved",
@@ -105,6 +105,7 @@ Respond ONLY with valid JSON:
 Rules:
 - meeting_note: mentions a call, meeting, conversation with someone, discussed X with Y
 - task: "remind me to X", "need to do X", "add task X"
+- eod: he asks for his end-of-day / EoD update ("draft my update", "eod", "update for the group"), usually followed by what he did today
 - journal: personal reflection, how the day went, feelings, gratitude
 - general: anything else (use journalText to capture it)`,
     messages: [{ role: "user", content: `Transcript: "${transcript}"` }],

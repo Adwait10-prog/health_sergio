@@ -439,6 +439,20 @@ model OsChecklistItem {
   @@unique([listKey, itemId])
 }
 
+// The daily work record: one outcome-first EoD update per day, drafted over WhatsApp
+model EodUpdate {
+  id        String   @id @default(cuid())
+  date      DateTime @unique  // midnight IST as UTC, same as every other day row
+  outcome   String            // the headline line (shown on Today)
+  draft     String            // full paste-ready update
+  final     String?           // what was actually posted (capture comes later)
+  streams   String            // JSON array of stream tags
+  source    String            // "text" | "voice"
+  notes     String?           // what I said I did (text or transcript)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // Adwait OS page — free-text notes (e.g. key "three" = today's three)
 model OsNote {
   key       String   @id
