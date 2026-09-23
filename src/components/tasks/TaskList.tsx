@@ -97,7 +97,7 @@ export default function TaskList({
 
       {/* Done tasks — last 5 visible, rest scrollable */}
       {done.length > 0 && (
-        <div className="mt-1 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="mt-1 pt-1" style={{ borderTop: "1px solid var(--line)" }}>
           {doneHidden > 0 && (
             <p className="text-xs py-1 px-1" style={{ color: "var(--text-muted)" }}>
               +{doneHidden} more completed
@@ -125,8 +125,7 @@ export default function TaskList({
           <button
             type="submit"
             disabled={adding}
-            className="text-xs px-2 py-0.5 rounded-md font-medium"
-            style={{ background: "var(--accent-soft)", color: "var(--accent-strong)" }}
+            className="btn sm primary"
           >
             Add
           </button>

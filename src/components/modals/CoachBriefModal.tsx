@@ -33,8 +33,7 @@ export default function CoachBriefModal() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-        style={{ background: "var(--accent-soft)", color: "var(--accent-strong)" }}
+        className="btn"
       >
         <span>📋</span> Coach Brief
       </button>
@@ -46,18 +45,19 @@ export default function CoachBriefModal() {
           onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
         >
           <div
-            className="w-full max-w-2xl rounded-2xl flex flex-col"
+            className="w-full max-w-2xl flex flex-col"
             style={{
-              background: "var(--bg-card)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              borderRadius: "var(--r)",
+              boxShadow: "none",
+              border: "1px solid var(--line)",
               maxHeight: "85vh",
             }}
           >
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--border)" }}
+              style={{ borderBottom: "1px solid var(--line)" }}
             >
               <h2 className="text-base font-semibold" style={{ color: "var(--text)" }}>
                 Claude Coach Brief
@@ -66,8 +66,7 @@ export default function CoachBriefModal() {
                 <button
                   onClick={fetchBrief}
                   disabled={loading}
-                  className="text-xs px-2.5 py-1 rounded-lg"
-                  style={{ background: "var(--bg-soft)", color: "var(--text-muted)" }}
+                  className="btn sm"
                 >
                   {loading ? "Loading…" : "Refresh"}
                 </button>
@@ -100,7 +99,7 @@ export default function CoachBriefModal() {
             {/* Footer */}
             <div
               className="px-5 py-4 flex justify-between items-center"
-              style={{ borderTop: "1px solid var(--border)" }}
+              style={{ borderTop: "1px solid var(--line)" }}
             >
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                 Copy → paste into Claude → get response → use Import Response
@@ -108,11 +107,10 @@ export default function CoachBriefModal() {
               <button
                 onClick={copyToClipboard}
                 disabled={!markdown || loading}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                className="btn primary"
                 style={{
-                  background: copied ? "var(--accent-soft)" : "var(--accent)",
-                  color: copied ? "var(--accent-strong)" : "#fff",
                   opacity: !markdown || loading ? 0.5 : 1,
+                  ...(copied ? { background: "var(--ok-soft)", borderColor: "transparent", color: "var(--ok)" } : {}),
                 }}
               >
                 {copied ? "Copied ✓" : "Copy to clipboard"}

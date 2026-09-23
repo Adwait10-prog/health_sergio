@@ -6,15 +6,15 @@ import { format } from "date-fns";
 import TaskList from "@/components/tasks/TaskList";
 
 const TYPE_COLORS: Record<string, { bg: string; text: string }> = {
-  gym_lc:       { bg: "#FEF3C7", text: "#B45309" },
-  gym_ub:       { bg: "#FEF3C7", text: "#B45309" },
-  gym_fb_light: { bg: "#FEF7E0", text: "#B45309" },
-  easy:         { bg: "#D1FAE5", text: "#065F46" },
-  quality:      { bg: "#A7F3D0", text: "#065F46" },
-  long:         { bg: "#16A34A", text: "#FFFFFF" },
-  swim:         { bg: "#DBEAFE", text: "#2563EB" },
-  rest:         { bg: "#F0F3F8", text: "#94A3B8" },
-  race:         { bg: "#16A34A", text: "#FFFFFF" },
+  gym_lc:       { bg: "var(--watch-soft)", text: "var(--watch)" },
+  gym_ub:       { bg: "var(--watch-soft)", text: "var(--watch)" },
+  gym_fb_light: { bg: "color-mix(in srgb, var(--watch) 7%, var(--surface))", text: "var(--watch)" },
+  easy:         { bg: "var(--ok-soft)", text: "var(--ok)" },
+  quality:      { bg: "color-mix(in srgb, var(--ok) 24%, var(--surface))", text: "var(--ok)" },
+  long:         { bg: "var(--ok)", text: "#FFFFFF" }, // --ok stays dark in both themes
+  swim:         { bg: "var(--info-soft)", text: "var(--info)" },
+  rest:         { bg: "var(--surface-2)", text: "var(--ink-4)" },
+  race:         { bg: "var(--ok)", text: "#FFFFFF" },
 };
 
 interface Props {
@@ -44,16 +44,15 @@ export default async function PageSidebar({ section, accentColor }: Props) {
 
   const card: React.CSSProperties = {
     background: "var(--surface)",
-    borderRadius: "var(--radius)",
-    border: "1px solid var(--border)",
+    borderRadius: "var(--r)",
+    border: "1px solid var(--line)",
     padding: 16,
-    boxShadow: "var(--shadow)",
   };
 
-  const tc = todaySession ? (TYPE_COLORS[todaySession.type] ?? { bg: "#F0F3F8", text: "#94A3B8" }) : null;
+  const tc = todaySession ? (TYPE_COLORS[todaySession.type] ?? { bg: "var(--surface-2)", text: "var(--ink-4)" }) : null;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "sticky", top: 24, alignSelf: "start" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "sticky", top: 24, alignSelf: "start", width: "100%" }}>
 
       {/* Recovery snapshot */}
       <div style={card}>
@@ -62,23 +61,23 @@ export default async function PageSidebar({ section, accentColor }: Props) {
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {/* RHR */}
-          <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ background: "var(--surface-2)", borderRadius: "var(--r-s)", padding: "10px 12px" }}>
             <p style={{ fontSize: 10, color: "var(--text-4)", margin: "0 0 4px", fontWeight: 600 }}>RESTING HR</p>
-            <p style={{ fontSize: 18, fontWeight: 800, color: latestLog?.rhrBpm ? (latestLog.rhrBpm <= 60 ? "var(--c-fitness)" : latestLog.rhrBpm <= 70 ? "var(--text-1)" : "#F97316") : "var(--text-4)", margin: 0 }}>
+            <p style={{ fontSize: 18, fontWeight: 800, color: latestLog?.rhrBpm ? (latestLog.rhrBpm <= 60 ? "var(--ok)" : latestLog.rhrBpm <= 70 ? "var(--ink)" : "var(--watch)") : "var(--text-4)", margin: 0 }}>
               {latestLog?.rhrBpm ?? "—"}
               {latestLog?.rhrBpm && <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}> bpm</span>}
             </p>
           </div>
           {/* HRV */}
-          <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ background: "var(--surface-2)", borderRadius: "var(--r-s)", padding: "10px 12px" }}>
             <p style={{ fontSize: 10, color: "var(--text-4)", margin: "0 0 4px", fontWeight: 600 }}>HRV</p>
-            <p style={{ fontSize: 18, fontWeight: 800, color: latestLog?.hrvMs ? (latestLog.hrvMs >= 60 ? "var(--c-fitness)" : latestLog.hrvMs >= 40 ? "var(--text-1)" : "#F97316") : "var(--text-4)", margin: 0 }}>
+            <p style={{ fontSize: 18, fontWeight: 800, color: latestLog?.hrvMs ? (latestLog.hrvMs >= 60 ? "var(--ok)" : latestLog.hrvMs >= 40 ? "var(--ink)" : "var(--watch)") : "var(--text-4)", margin: 0 }}>
               {latestLog?.hrvMs ?? "—"}
               {latestLog?.hrvMs && <span style={{ fontSize: 10, fontWeight: 400, color: "var(--text-4)" }}> ms</span>}
             </p>
           </div>
           {/* VO2 */}
-          <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ background: "var(--surface-2)", borderRadius: "var(--r-s)", padding: "10px 12px" }}>
             <p style={{ fontSize: 10, color: "var(--text-4)", margin: "0 0 4px", fontWeight: 600 }}>VO₂ MAX</p>
             <p style={{ fontSize: 18, fontWeight: 800, color: "var(--text-1)", margin: 0 }}>
               {latestLog?.vo2MaxMlKgMin ?? "—"}
@@ -86,7 +85,7 @@ export default async function PageSidebar({ section, accentColor }: Props) {
             </p>
           </div>
           {/* Weight */}
-          <div style={{ background: "var(--bg-subtle)", borderRadius: 8, padding: "10px 12px" }}>
+          <div style={{ background: "var(--surface-2)", borderRadius: "var(--r-s)", padding: "10px 12px" }}>
             <p style={{ fontSize: 10, color: "var(--text-4)", margin: "0 0 4px", fontWeight: 600 }}>WEIGHT</p>
             <p style={{ fontSize: 18, fontWeight: 800, color: "var(--text-1)", margin: 0 }}>
               {latestLog?.weightKg ?? "—"}
@@ -95,7 +94,7 @@ export default async function PageSidebar({ section, accentColor }: Props) {
           </div>
         </div>
         {latestLog && (
-          <p style={{ fontSize: 10, color: "var(--text-4)", margin: "10px 0 0", paddingTop: 10, borderTop: "1px solid var(--border-light)" }}>
+          <p style={{ fontSize: 10, color: "var(--text-4)", margin: "10px 0 0", paddingTop: 10, borderTop: "1px solid var(--line)" }}>
             Synced {format(latestLog.date, "EEE d MMM")} via Apple Watch
           </p>
         )}
@@ -108,7 +107,7 @@ export default async function PageSidebar({ section, accentColor }: Props) {
             Training · Wk {weekStats.weekNum}
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, background: tc.bg, color: tc.text }}>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: "var(--r-x)", background: tc.bg, color: tc.text }}>
               {todaySession.type.replace(/_/g, " ").toUpperCase()}
             </span>
           </div>
@@ -121,12 +120,12 @@ export default async function PageSidebar({ section, accentColor }: Props) {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ fontSize: 11, color: "var(--text-4)" }}>🏁 {daysToRace}d to race</span>
             {!todaySession.logStatus && (
-              <a href="/fitness" style={{ fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 20, background: "var(--c-fitness)", color: "#fff", textDecoration: "none" }}>
+              <a href="/fitness" className="btn sm primary" style={{ textDecoration: "none" }}>
                 Log →
               </a>
             )}
             {todaySession.logStatus === "done" && (
-              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--c-fitness)" }}>✓ Done</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ok)" }}>✓ Done</span>
             )}
           </div>
         </div>

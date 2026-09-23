@@ -15,19 +15,9 @@ interface Task {
 }
 
 const PRIORITY_COLOR: Record<string, string> = {
-  high:   "#EF4444",
-  medium: "var(--gold)",
-  low:    "var(--text-muted)",
-};
-
-const SECTION_COLOR: Record<string, string> = {
-  today:      "var(--accent)",
-  technical:  "var(--technical)",
-  founder:    "var(--founder)",
-  finance:    "var(--finance)",
-  fitness:    "var(--accent)",
-  reflection: "var(--reflection)",
-  learning:   "var(--gold)",
+  high:   "var(--act)",
+  medium: "var(--watch)",
+  low:    "var(--ink-4)",
 };
 
 interface Props {
@@ -65,7 +55,7 @@ export default function TaskItem({ task, showSection = false, onUpdate }: Props)
 
   return (
     <div
-      className="flex items-center gap-2.5 py-2 px-1 rounded-lg group transition-colors hover:bg-[var(--bg-soft)]"
+      className="flex items-center gap-2.5 py-2 px-1 rounded-lg group transition-colors hover:bg-[var(--surface-2)]"
       style={{ opacity: loading ? 0.6 : 1 }}
     >
       {/* Checkbox */}
@@ -73,13 +63,13 @@ export default function TaskItem({ task, showSection = false, onUpdate }: Props)
         onClick={toggle}
         className="w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors"
         style={{
-          borderColor: done ? "var(--accent)" : "var(--border)",
-          background: done ? "var(--accent)" : "transparent",
+          borderColor: done ? "var(--ink)" : "var(--line-2)",
+          background: done ? "var(--ink)" : "transparent",
         }}
       >
         {done && (
           <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-            <path d="M1 3.5L3.5 6L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M1 3.5L3.5 6L8 1" stroke="var(--bg)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         )}
       </button>
@@ -88,7 +78,7 @@ export default function TaskItem({ task, showSection = false, onUpdate }: Props)
       <button
         onClick={cyclePriority}
         className="w-2 h-2 rounded-full shrink-0 transition-opacity opacity-70 hover:opacity-100"
-        style={{ background: PRIORITY_COLOR[task.priority] ?? "var(--text-muted)" }}
+        style={{ background: PRIORITY_COLOR[task.priority] ?? "var(--ink-4)" }}
         title={`Priority: ${task.priority} (click to change)`}
       />
 
@@ -108,8 +98,8 @@ export default function TaskItem({ task, showSection = false, onUpdate }: Props)
         <span
           className="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
           style={{
-            background: "var(--bg-soft)",
-            color: SECTION_COLOR[task.section] ?? "var(--text-muted)",
+            background: "var(--surface-2)",
+            color: "var(--ink-3)",
           }}
         >
           {task.section}

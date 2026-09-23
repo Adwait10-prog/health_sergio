@@ -39,10 +39,10 @@ export default async function FounderPage() {
   }
 
   const counters = [
-    { label: "New connections", value: weekConnections, color: "var(--founder)"   },
-    { label: "Startup actions", value: weekStartup,     color: "var(--technical)" },
-    { label: "Posts published", value: weekPosts,       color: "var(--finance)"   },
-    { label: "Outreach done",   value: weekOutreach,    color: "var(--accent)"    },
+    { label: "New connections", value: weekConnections, color: "var(--ink)" },
+    { label: "Startup actions", value: weekStartup,     color: "var(--ink)" },
+    { label: "Posts published", value: weekPosts,       color: "var(--ink)" },
+    { label: "Outreach done",   value: weekOutreach,    color: "var(--ink)" },
   ];
 
   return (
@@ -57,7 +57,7 @@ export default async function FounderPage() {
 
           {/* Score + counters */}
           <div
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
           >
             <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
@@ -66,7 +66,7 @@ export default async function FounderPage() {
               </div>
               <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {counters.map(({ label, value, color }) => (
-                  <div key={label} style={{ background: "var(--bg-soft)", borderRadius: 8, padding: 12 }}>
+                  <div key={label} style={{ background: "var(--surface-2)", borderRadius: "var(--r)", padding: 12 }}>
                     <p style={{ fontSize: 12, marginBottom: 2, color: "var(--text-muted)", margin: "0 0 2px" }}>{label}</p>
                     <p style={{ fontSize: 20, fontWeight: 700, color, margin: 0 }}>{value}</p>
                   </div>
@@ -80,16 +80,16 @@ export default async function FounderPage() {
 
           {/* LinkedIn followers sparkline */}
           <div
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <h2 style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: 0 }}>LinkedIn Followers</h2>
-              <span style={{ fontSize: 20, fontWeight: 700, color: "var(--founder)" }}>
+              <span style={{ fontSize: 20, fontWeight: 700, color: "var(--ink)" }}>
                 {latestFollowers > 0 ? latestFollowers.toLocaleString() : "—"}
               </span>
             </div>
             {filledSparkline.some((v) => v > 0) ? (
-              <Sparkline values={filledSparkline} color="var(--founder)" width={400} height={48} />
+              <Sparkline values={filledSparkline} color="var(--watch)" width={400} height={48} />
             ) : (
               <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>
                 Log your LinkedIn follower count daily to see the growth trend.

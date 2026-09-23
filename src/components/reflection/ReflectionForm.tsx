@@ -81,12 +81,12 @@ export default function ReflectionForm({
     setTimeout(() => setStatus("idle"), 2500);
   }
 
-  const accentColor = "var(--reflection)";
+  const accentColor = "var(--ink)";
 
   const inputStyle: React.CSSProperties = {
-    background: "var(--bg-soft)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
+    background: "var(--surface-2)",
+    border: "1px solid var(--line)",
+    borderRadius: "var(--r-s)",
     padding: "8px 12px",
     color: "var(--text)",
     fontSize: 13,
@@ -104,10 +104,10 @@ export default function ReflectionForm({
 
   return (
     <div
-      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+      style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
     >
       {/* Tab switcher */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, padding: 4, borderRadius: 8, background: "var(--bg-soft)" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 16, padding: 4, borderRadius: "var(--r-s)", background: "var(--surface-2)" }}>
         {(["daily", "weekly", "monthly"] as Tab[]).map((t) => (
           <button
             key={t}
@@ -115,15 +115,14 @@ export default function ReflectionForm({
             style={{
               flex: 1,
               padding: "6px 0",
-              borderRadius: 6,
+              borderRadius: "var(--r-s)",
               fontSize: 12,
               fontWeight: 600,
               textTransform: "capitalize",
-              border: "none",
+              border: tab === t ? "1px solid var(--line)" : "1px solid transparent",
               cursor: "pointer",
-              background: tab === t ? "var(--bg-card)" : "transparent",
-              color: tab === t ? accentColor : "var(--text-muted)",
-              boxShadow: tab === t ? "var(--shadow-sm)" : "none",
+              background: tab === t ? "var(--surface)" : "transparent",
+              color: tab === t ? accentColor : "var(--ink-3)",
             }}
           >
             {t}
@@ -282,18 +281,14 @@ export default function ReflectionForm({
       <button
         onClick={save}
         disabled={status === "saving"}
+        className="btn primary"
         style={{
-          background: status === "saved" ? "var(--accent-soft)" : accentColor,
-          color: status === "saved" ? "var(--accent-strong)" : "#fff",
-          border: "none",
-          borderRadius: 10,
-          padding: "10px 0",
-          fontSize: 13,
-          fontWeight: 700,
           width: "100%",
-          cursor: "pointer",
+          justifyContent: "center",
+          fontWeight: 600,
           marginTop: 16,
           opacity: status === "saving" ? 0.7 : 1,
+          ...(status === "saved" ? { background: "var(--ok-soft)", borderColor: "transparent", color: "var(--ok)" } : {}),
         }}
       >
         {status === "saved" ? "Saved ✓" : status === "saving" ? "Saving…" : `Save ${tab} reflection`}

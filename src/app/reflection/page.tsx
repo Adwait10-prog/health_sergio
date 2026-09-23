@@ -97,7 +97,7 @@ export default async function ReflectionPage() {
   // All recent entries for the history cards (includes today)
   const recentEntries = last5Daily;
 
-  const accentColor = "var(--c-reflection)";
+  const accentColor = "var(--ink-2)";
 
   return (
     <div className="main">
@@ -111,10 +111,10 @@ export default async function ReflectionPage() {
       {/* ── Dashboard stats row ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 20 }}>
         {/* Journal streak */}
-        <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: "16px 18px", boxShadow: "var(--shadow)" }}>
+        <div style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)", padding: "16px 18px" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Journal Streak</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontSize: 32, fontWeight: 800, color: journalStreak > 0 ? accentColor : "var(--text-3)", lineHeight: 1 }}>{journalStreak}</span>
+            <span style={{ fontSize: 32, fontWeight: 800, color: journalStreak > 0 ? "var(--ink)" : "var(--ink-3)", lineHeight: 1 }}>{journalStreak}</span>
             <span style={{ fontSize: 13, color: "var(--text-3)" }}>days</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 4 }}>
@@ -123,19 +123,19 @@ export default async function ReflectionPage() {
         </div>
 
         {/* This month consistency */}
-        <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: "16px 18px", boxShadow: "var(--shadow)" }}>
+        <div style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)", padding: "16px 18px" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>This Month</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontSize: 32, fontWeight: 800, color: journalPct >= 70 ? accentColor : journalPct >= 40 ? "var(--c-today)" : "var(--text-3)", lineHeight: 1 }}>{journalPct}%</span>
+            <span style={{ fontSize: 32, fontWeight: 800, color: journalPct >= 70 ? "var(--ok)" : journalPct >= 40 ? "var(--watch)" : "var(--ink-3)", lineHeight: 1 }}>{journalPct}%</span>
           </div>
           <div style={{ fontSize: 11, color: "var(--text-4)", marginTop: 4 }}>{journalDaysThisMonth} / {daysInMonthSoFar} days logged</div>
         </div>
 
         {/* Avg mood */}
-        <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: "16px 18px", boxShadow: "var(--shadow)" }}>
+        <div style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)", padding: "16px 18px" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Avg Mood · 7d</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontSize: 32, fontWeight: 800, color: avgMood != null ? (avgMood >= 7 ? accentColor : avgMood >= 5 ? "var(--c-today)" : "var(--c-warn)") : "var(--text-3)", lineHeight: 1 }}>
+            <span style={{ fontSize: 32, fontWeight: 800, color: avgMood != null ? (avgMood >= 7 ? "var(--ok)" : avgMood >= 5 ? "var(--watch)" : "var(--act)") : "var(--ink-3)", lineHeight: 1 }}>
               {avgMood ?? "—"}
             </span>
             {avgMood != null && <span style={{ fontSize: 13, color: "var(--text-3)" }}>/10</span>}
@@ -146,10 +146,10 @@ export default async function ReflectionPage() {
         </div>
 
         {/* Avg energy */}
-        <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: "16px 18px", boxShadow: "var(--shadow)" }}>
+        <div style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)", padding: "16px 18px" }}>
           <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Avg Energy · 7d</div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-            <span style={{ fontSize: 32, fontWeight: 800, color: avgEnergy != null ? (avgEnergy >= 7 ? accentColor : avgEnergy >= 5 ? "var(--c-today)" : "var(--c-warn)") : "var(--text-3)", lineHeight: 1 }}>
+            <span style={{ fontSize: 32, fontWeight: 800, color: avgEnergy != null ? (avgEnergy >= 7 ? "var(--ok)" : avgEnergy >= 5 ? "var(--watch)" : "var(--act)") : "var(--ink-3)", lineHeight: 1 }}>
               {avgEnergy ?? "—"}
             </span>
             {avgEnergy != null && <span style={{ fontSize: 13, color: "var(--text-3)" }}>/10</span>}
@@ -162,11 +162,11 @@ export default async function ReflectionPage() {
 
       {/* Monthly identity scores */}
       {monthlyReview && (
-        <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: "18px 20px", boxShadow: "var(--shadow)", marginBottom: 20 }}>
+        <div style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)", padding: "18px 20px", marginBottom: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>{format(now, "MMMM yyyy")} Identity Scores</h2>
             {monthlyReview.overallScore != null && (
-              <span style={{ fontSize: 12, fontWeight: 600, color: accentColor, background: "var(--c-reflection-bg)", padding: "3px 10px", borderRadius: 20 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)", background: "var(--surface-2)", padding: "3px 10px", borderRadius: "var(--r-x)" }}>
                 Overall {monthlyReview.overallScore}/10
               </span>
             )}
@@ -180,9 +180,9 @@ export default async function ReflectionPage() {
               { label: "Decisions",     value: monthlyReview.decisionMakingScore, icon: "⚖️" },
               { label: "Discipline",    value: monthlyReview.disciplineScore,     icon: "🎯" },
             ].map(({ label, value, icon }) => (
-              <div key={label} style={{ background: "var(--bg-subtle)", borderRadius: 10, padding: "12px 14px", textAlign: "center" }}>
+              <div key={label} style={{ background: "var(--surface-2)", borderRadius: "var(--r)", padding: "12px 14px", textAlign: "center" }}>
                 <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
-                <div style={{ fontSize: 22, fontWeight: 800, color: value != null ? accentColor : "var(--text-3)", lineHeight: 1 }}>{value ?? "—"}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: value != null ? "var(--ink)" : "var(--ink-3)", lineHeight: 1 }}>{value ?? "—"}</div>
                 <div style={{ fontSize: 10, color: "var(--text-4)", marginTop: 4 }}>{label}</div>
               </div>
             ))}
@@ -209,10 +209,10 @@ export default async function ReflectionPage() {
 
           {/* Weekly review summary */}
           {weeklyEntry && (
-            <div style={{ background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)", padding: 18, boxShadow: "var(--shadow)" }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: accentColor, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>This Week's Review</div>
+            <div style={{ background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)", padding: 18 }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>This Week's Review</div>
               {weeklyEntry.weeklyScore != null && (
-                <div style={{ fontSize: 24, fontWeight: 800, color: accentColor, marginBottom: 8 }}>{weeklyEntry.weeklyScore}/10</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "var(--ink)", marginBottom: 8 }}>{weeklyEntry.weeklyScore}/10</div>
               )}
               {weeklyEntry.weeklyWins && (
                 <div style={{ marginBottom: 8 }}>
@@ -240,10 +240,9 @@ export default async function ReflectionPage() {
         <div style={{
           marginTop: 28,
           background: "var(--surface)",
-          borderRadius: "var(--radius)",
-          border: "1px solid var(--border)",
+          borderRadius: "var(--r)",
+          border: "1px solid var(--line)",
           padding: "22px 24px",
-          boxShadow: "var(--shadow)",
         }}>
           <JournalHistoryCards
             entries={recentEntries.map(e => ({

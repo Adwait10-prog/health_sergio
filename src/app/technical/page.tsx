@@ -36,10 +36,10 @@ export default async function TechnicalPage() {
   const featuresSparkline = last30Logs.map((l) => l.featuresShipped ?? 0);
 
   const counters = [
-    { label: "Hours coded",      value: weekHours,  unit: "h",  color: "var(--technical)" },
-    { label: "Features shipped", value: weekFeats,  unit: "",   color: "var(--accent)" },
-    { label: "AI experiments",   value: weekAI,     unit: "",   color: "var(--founder)" },
-    { label: "PRs merged",       value: weekPRs,    unit: "",   color: "var(--finance)" },
+    { label: "Hours coded",      value: weekHours,  unit: "h",  color: "var(--ink)" },
+    { label: "Features shipped", value: weekFeats,  unit: "",   color: "var(--ink)" },
+    { label: "AI experiments",   value: weekAI,     unit: "",   color: "var(--ink)" },
+    { label: "PRs merged",       value: weekPRs,    unit: "",   color: "var(--ink)" },
   ];
 
   return (
@@ -55,7 +55,7 @@ export default async function TechnicalPage() {
 
           {/* CTO score + counters */}
           <div
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
           >
             <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
@@ -66,7 +66,7 @@ export default async function TechnicalPage() {
                 {counters.map(({ label, value, unit, color }) => (
                   <div
                     key={label}
-                    style={{ background: "var(--bg-soft)", borderRadius: 8, padding: 12 }}
+                    style={{ background: "var(--surface-2)", borderRadius: "var(--r)", padding: 12 }}
                   >
                     <p style={{ fontSize: 12, marginBottom: 2, color: "var(--text-muted)", margin: "0 0 2px" }}>{label}</p>
                     <p style={{ fontSize: 20, fontWeight: 700, color, margin: 0 }}>
@@ -83,7 +83,7 @@ export default async function TechnicalPage() {
 
           {/* 30-day sparklines */}
           <div
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
           >
             <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: "var(--text)", margin: "0 0 16px" }}>30-day trends</h2>
             {last30Logs.length === 0 ? (
@@ -91,13 +91,13 @@ export default async function TechnicalPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {[
-                  { label: "Hours coded / day", data: hoursSparkline,    color: "var(--technical)" },
+                  { label: "Hours coded / day", data: hoursSparkline,    color: "var(--info)" },
                   { label: "Features shipped",  data: featuresSparkline, color: "var(--accent)"    },
                 ].map(({ label, data, color }) => (
                   <div key={label} style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <span style={{ fontSize: 12, width: 144, flexShrink: 0, color: "var(--text-dim)" }}>{label}</span>
                     <Sparkline values={data} color={color} width={200} height={36} />
-                    <span style={{ fontSize: 13, fontWeight: 600, marginLeft: "auto", color }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, marginLeft: "auto", color: "var(--ink)" }}>
                       {data[data.length - 1]?.toFixed(1) ?? "—"}
                     </span>
                   </div>

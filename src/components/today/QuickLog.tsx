@@ -45,8 +45,8 @@ export default function QuickLog() {
 
   return (
     <div style={{
-      background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
-      padding: 20, boxShadow: "var(--shadow)",
+      background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)",
+      padding: 20,
     }}>
       <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-1)", margin: "0 0 16px" }}>Quick Log</h2>
 
@@ -62,10 +62,10 @@ export default function QuickLog() {
                 <button key={key} onClick={() => toggleHabit(key)} style={{
                   display: "inline-flex", alignItems: "center", gap: 5,
                   padding: "6px 12px", fontSize: 12, fontWeight: 600,
-                  border: on ? "none" : "1.5px solid var(--border)",
-                  borderRadius: 20, cursor: "pointer", fontFamily: "inherit",
-                  background: on ? "var(--c-today)" : "var(--bg-subtle)",
-                  color: on ? "#fff" : "var(--text-3)",
+                  border: on ? "1.5px solid var(--ink)" : "1.5px solid var(--line)",
+                  borderRadius: "var(--r-x)", cursor: "pointer", fontFamily: "inherit",
+                  background: on ? "var(--ink)" : "var(--surface-2)",
+                  color: on ? "var(--bg)" : "var(--ink-3)",
                   transition: "all 0.12s",
                 }}>
                   <span style={{ fontSize: 13 }}>{icon}</span>
@@ -81,38 +81,37 @@ export default function QuickLog() {
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
             <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-3)" }}>Mood — {MOODS[Math.round((mood - 1) * (MOODS.length - 1) / 9)]}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--c-fitness)" }}>{mood}/10</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{mood}/10</span>
           </div>
           <input type="range" min={1} max={10} value={mood} onChange={(e) => setMood(Number(e.target.value))}
-            style={{ width: "100%", accentColor: "var(--c-fitness)" }} />
+            style={{ width: "100%", accentColor: "var(--ink)" }} />
         </div>
 
         {/* Stress */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
             <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-3)" }}>Stress</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--c-founder)" }}>{stress}/10</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}>{stress}/10</span>
           </div>
           <input type="range" min={1} max={10} value={stress} onChange={(e) => setStress(Number(e.target.value))}
-            style={{ width: "100%", accentColor: "var(--c-founder)" }} />
+            style={{ width: "100%", accentColor: "var(--ink)" }} />
         </div>
 
         {/* Water */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text-3)" }}>💧 Water (L)</span>
           <input type="number" step={0.5} min={0} max={10} value={water} onChange={(e) => setWater(e.target.value)} placeholder="2.5"
-            style={{ width: 70, padding: "6px 10px", fontSize: 13, fontWeight: 600, border: "1px solid var(--border)", borderRadius: "var(--radius-xs)", textAlign: "center", fontFamily: "inherit", outline: "none", background: "var(--surface)", color: "var(--text-1)" }} />
+            style={{ width: 70, padding: "6px 10px", fontSize: 13, fontWeight: 600, border: "1px solid var(--line)", borderRadius: "var(--r-s)", textAlign: "center", fontFamily: "inherit", outline: "none", background: "var(--surface)", color: "var(--text-1)" }} />
         </div>
 
         {/* Notes */}
         <input placeholder="Any notes for today…" value={notes} onChange={(e) => setNotes(e.target.value)}
-          style={{ padding: "9px 12px", fontSize: 13, border: "1px solid var(--border)", borderRadius: "var(--radius-xs)", fontFamily: "inherit", outline: "none", background: "var(--surface)", color: "var(--text-1)", width: "100%", boxSizing: "border-box" }} />
+          style={{ padding: "9px 12px", fontSize: 13, border: "1px solid var(--line)", borderRadius: "var(--r-s)", fontFamily: "inherit", outline: "none", background: "var(--surface)", color: "var(--text-1)", width: "100%", boxSizing: "border-box" }} />
 
-        <button onClick={save} disabled={status === "saving"} style={{
-          width: "100%", padding: "10px 0", fontSize: 13, fontWeight: 600,
-          color: "#fff", background: status === "saved" ? "var(--c-fitness)" : "var(--c-today)",
-          border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer", fontFamily: "inherit",
+        <button onClick={save} disabled={status === "saving"} className="btn primary" style={{
+          width: "100%", justifyContent: "center", fontWeight: 600,
           opacity: status === "saving" ? 0.7 : 1, transition: "background 0.2s",
+          ...(status === "saved" ? { background: "var(--ok-soft)", borderColor: "transparent", color: "var(--ok)" } : {}),
         }}>
           {status === "saved" ? "✓ Saved!" : status === "saving" ? "Saving…" : "Save"}
         </button>

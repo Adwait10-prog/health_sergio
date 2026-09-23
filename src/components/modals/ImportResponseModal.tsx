@@ -38,8 +38,7 @@ export default function ImportResponseModal() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-        style={{ background: "var(--bg-soft)", color: "var(--text-dim)", border: "1px solid var(--border)" }}
+        className="btn"
       >
         <span>⬇️</span> Import Response
       </button>
@@ -51,18 +50,19 @@ export default function ImportResponseModal() {
           onClick={(e) => { if (e.target === e.currentTarget) { setOpen(false); reset(); } }}
         >
           <div
-            className="w-full max-w-2xl rounded-2xl flex flex-col"
+            className="w-full max-w-2xl flex flex-col"
             style={{
-              background: "var(--bg-card)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-              border: "1px solid var(--border)",
+              background: "var(--surface)",
+              borderRadius: "var(--r)",
+              boxShadow: "none",
+              border: "1px solid var(--line)",
               maxHeight: "85vh",
             }}
           >
             {/* Header */}
             <div
               className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--border)" }}
+              style={{ borderBottom: "1px solid var(--line)" }}
             >
               <h2 className="text-base font-semibold" style={{ color: "var(--text)" }}>
                 Import Claude Response
@@ -82,10 +82,10 @@ export default function ImportResponseModal() {
                 <div className="flex flex-col gap-4">
                   {result.noJson ? (
                     <div
-                      className="rounded-lg p-4"
-                      style={{ background: "var(--bg-soft)", border: "1px solid var(--border)" }}
+                      className="p-4"
+                      style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)" }}
                     >
-                      <p className="text-sm font-semibold" style={{ color: "var(--gold)" }}>
+                      <p className="text-sm font-semibold" style={{ color: "var(--watch)" }}>
                         No JSON block found — saved as note only
                       </p>
                       <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
@@ -94,10 +94,10 @@ export default function ImportResponseModal() {
                     </div>
                   ) : (
                     <div
-                      className="rounded-lg p-4"
-                      style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)" }}
+                      className="p-4"
+                      style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)" }}
                     >
-                      <p className="text-sm font-semibold" style={{ color: "var(--accent-strong)" }}>
+                      <p className="text-sm font-semibold" style={{ color: "var(--ok)" }}>
                         Applied · {result.tasksCreated} task{result.tasksCreated !== 1 ? "s" : ""} created
                         {result.flags.length > 0 ? `, ${result.flags.length} flag${result.flags.length !== 1 ? "s" : ""}` : ""}
                       </p>
@@ -112,7 +112,7 @@ export default function ImportResponseModal() {
                       <ul className="flex flex-col gap-1">
                         {result.flags.map((f, i) => (
                           <li key={i} className="text-sm flex items-start gap-2" style={{ color: "var(--text-dim)" }}>
-                            <span style={{ color: "var(--warn)" }}>⚠</span> {f}
+                            <span style={{ color: "var(--watch)" }}>⚠</span> {f}
                           </li>
                         ))}
                       </ul>
@@ -129,11 +129,12 @@ export default function ImportResponseModal() {
                     onChange={(e) => setRaw(e.target.value)}
                     placeholder="Paste Claude's response here…"
                     rows={14}
-                    className="w-full px-3 py-2.5 rounded-lg text-sm font-mono border resize-none"
+                    className="w-full px-3 py-2.5 text-sm font-mono border resize-none"
                     style={{
-                      borderColor: "var(--border)",
-                      background: "var(--bg-soft)",
-                      color: "var(--text)",
+                      borderColor: "var(--line)",
+                      borderRadius: "var(--r-s)",
+                      background: "var(--surface-2)",
+                      color: "var(--ink)",
                     }}
                   />
                 </div>
@@ -143,15 +144,14 @@ export default function ImportResponseModal() {
             {/* Footer */}
             <div
               className="px-5 py-4 flex justify-between items-center"
-              style={{ borderTop: "1px solid var(--border)" }}
+              style={{ borderTop: "1px solid var(--line)" }}
             >
               {status === "done" ? (
                 <>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>Tasks added to Today view</p>
                   <button
                     onClick={reset}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold"
-                    style={{ background: "var(--bg-soft)", color: "var(--text-dim)" }}
+                    className="btn"
                   >
                     Import another
                   </button>
@@ -164,10 +164,8 @@ export default function ImportResponseModal() {
                   <button
                     onClick={apply}
                     disabled={!raw.trim() || status === "applying"}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                    className="btn primary"
                     style={{
-                      background: "var(--accent)",
-                      color: "#fff",
                       opacity: !raw.trim() || status === "applying" ? 0.5 : 1,
                     }}
                   >

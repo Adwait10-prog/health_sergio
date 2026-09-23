@@ -40,37 +40,29 @@ export default function DeepWorkTimer() {
 
   return (
     <div style={{
-      background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
-      padding: 24, boxShadow: "var(--shadow)", display: "flex", alignItems: "center", justifyContent: "space-between",
+      background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)",
+      padding: 24, display: "flex", alignItems: "center", justifyContent: "space-between",
     }}>
       <div>
         <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text-4)", marginBottom: 4 }}>Deep Work Timer</p>
         <p style={{ fontSize: 32, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--text-1)", letterSpacing: "-0.02em", lineHeight: 1 }}>
           {fmt(elapsed)}
         </p>
-        {saved && <p style={{ fontSize: 12, color: "var(--c-fitness)", marginTop: 4 }}>Saved ✓</p>}
+        {saved && <p style={{ fontSize: 12, color: "var(--ok)", marginTop: 4 }}>Saved ✓</p>}
       </div>
       {!running ? (
         <button
           onClick={() => { setRunning(true); setSaved(false); }}
-          style={{
-            padding: "10px 24px", fontSize: 14, fontWeight: 600, border: "none",
-            borderRadius: "var(--radius-sm)", cursor: "pointer",
-            color: "#fff", background: "var(--c-fitness)",
-            display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
-          }}
+          className="btn primary"
+          style={{ fontWeight: 600, gap: 6 }}
         >
           ▶ Start
         </button>
       ) : (
         <button
           onClick={stop}
-          style={{
-            padding: "10px 24px", fontSize: 14, fontWeight: 600, border: "none",
-            borderRadius: "var(--radius-sm)", cursor: "pointer",
-            color: "#fff", background: "var(--c-founder)",
-            display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit",
-          }}
+          className="btn"
+          style={{ fontWeight: 600, gap: 6 }}
         >
           ⏸ Pause
         </button>

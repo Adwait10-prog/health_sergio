@@ -50,9 +50,9 @@ export default function FounderLogForm({ existing }: Props) {
   }
 
   const inputStyle: React.CSSProperties = {
-    background: "var(--bg-soft)",
-    border: "1px solid var(--border)",
-    borderRadius: 8,
+    background: "var(--surface-2)",
+    border: "1px solid var(--line)",
+    borderRadius: "var(--r-s)",
     padding: "8px 10px",
     color: "var(--text)",
     fontSize: 13,
@@ -70,7 +70,7 @@ export default function FounderLogForm({ existing }: Props) {
 
   return (
     <div
-      style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+      style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
     >
       <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, color: "var(--text)", margin: "0 0 12px" }}>Today's Log</h2>
       <form onSubmit={save} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -102,17 +102,13 @@ export default function FounderLogForm({ existing }: Props) {
         <button
           type="submit"
           disabled={status === "saving"}
+          className="btn primary"
           style={{
-            background: status === "saved" ? "var(--accent-soft)" : "var(--founder)",
-            color: status === "saved" ? "var(--accent-strong)" : "#fff",
-            border: "none",
-            borderRadius: 10,
-            padding: "10px 0",
-            fontSize: 13,
-            fontWeight: 700,
             width: "100%",
-            cursor: "pointer",
+            justifyContent: "center",
+            fontWeight: 600,
             opacity: status === "saving" ? 0.7 : 1,
+            ...(status === "saved" ? { background: "var(--ok-soft)", borderColor: "transparent", color: "var(--ok)" } : {}),
           }}
         >
           {status === "saved" ? "Saved ✓" : status === "saving" ? "Saving…" : "Save founder log"}

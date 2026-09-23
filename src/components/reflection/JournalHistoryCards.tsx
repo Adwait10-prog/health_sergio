@@ -20,12 +20,14 @@ function moodEmoji(score: number | null | undefined) {
   return MOODS[Math.round((score - 1) * (MOODS.length - 1) / 9)] ?? null;
 }
 
-function scoreColor(score: number | null | undefined, accent: string) {
-  if (score == null) return "var(--text-3)";
-  if (score >= 8) return accent;
-  if (score >= 6) return "var(--c-today)";
-  return "var(--c-warn)";
+function scoreColor(score: number | null | undefined) {
+  if (score == null) return "var(--ink-3)";
+  if (score >= 8) return "var(--ok)";
+  if (score >= 6) return "var(--watch)";
+  return "var(--act)";
 }
+
+const tint = (c: string, pct = 13) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
 
 export default function JournalHistoryCards({
   entries,
@@ -121,35 +123,34 @@ export default function JournalHistoryCards({
                 width: 220,
                 background: "var(--surface)",
                 borderRadius: "var(--radius)",
-                border: "1px solid var(--border)",
+                border: "1px solid var(--line)",
                 padding: "16px 18px",
-                boxShadow: "var(--shadow)",
                 cursor: "pointer",
-                transition: "transform 0.12s, box-shadow 0.12s",
+                transition: "transform 0.12s, border-color 0.12s",
                 display: "flex",
                 flexDirection: "column",
                 gap: 10,
               }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.10)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "var(--line-2)";
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "var(--line)";
               }}
             >
               {/* Date + score */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                   {dateStr}
                 </span>
                 {entry.weeklyScore != null && (
                   <span style={{
                     fontSize: 12, fontWeight: 800,
-                    color: scoreColor(entry.weeklyScore, accentColor),
-                    background: scoreColor(entry.weeklyScore, accentColor) + "15",
-                    padding: "2px 8px", borderRadius: 10,
+                    color: scoreColor(entry.weeklyScore),
+                    background: tint(scoreColor(entry.weeklyScore)),
+                    padding: "2px 8px", borderRadius: "var(--r-x)",
                   }}>
                     {entry.weeklyScore}/10
                   </span>
@@ -173,10 +174,10 @@ export default function JournalHistoryCards({
               {/* Footer chips */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: "auto" }}>
                 {entry.gratitudeItems && (
-                  <span style={{ fontSize: 10, background: accentColor + "15", color: accentColor, padding: "2px 7px", borderRadius: 8, fontWeight: 600 }}>🙏 Gratitude</span>
+                  <span style={{ fontSize: 10, background: tint(accentColor), color: accentColor, padding: "2px 7px", borderRadius: "var(--r-x)", fontWeight: 600 }}>🙏 Gratitude</span>
                 )}
                 {entry.lessonsLearned && (
-                  <span style={{ fontSize: 10, background: "var(--c-today-bg)", color: "var(--c-today)", padding: "2px 7px", borderRadius: 8, fontWeight: 600 }}>💡 Lessons</span>
+                  <span style={{ fontSize: 10, background: "var(--watch-soft)", color: "var(--watch)", padding: "2px 7px", borderRadius: "var(--r-x)", fontWeight: 600 }}>💡 Lessons</span>
                 )}
                 {!hasContent && (
                   <span style={{ fontSize: 10, color: "var(--text-4)", fontStyle: "italic" }}>Empty entry</span>
@@ -203,8 +204,8 @@ export default function JournalHistoryCards({
             style={{
               background: "var(--surface)",
               borderRadius: "var(--radius)",
-              border: "1px solid var(--border)",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
+              border: "1px solid var(--line)",
+              boxShadow: "none",
               width: "100%", maxWidth: 600,
               maxHeight: "85vh",
               display: "flex", flexDirection: "column",
@@ -219,12 +220,12 @@ export default function JournalHistoryCards({
               flexShrink: 0,
             }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>
                   {format(new Date(open.date), "EEEE, d MMMM yyyy")}
                 </div>
                 {open.weeklyScore != null && !editMode && (
                   <div style={{ fontSize: 13, color: "var(--text-3)", fontWeight: 500 }}>
-                    Day score: <strong style={{ color: scoreColor(open.weeklyScore, accentColor) }}>{open.weeklyScore}/10</strong>
+                    Day score: <strong style={{ color: scoreColor(open.weeklyScore) }}>{open.weeklyScore}/10</strong>
                     {moodEmoji(open.weeklyScore) && <span style={{ marginLeft: 6 }}>{moodEmoji(open.weeklyScore)}</span>}
                   </div>
                 )}
@@ -233,12 +234,7 @@ export default function JournalHistoryCards({
                 {!editMode && (
                   <button
                     onClick={() => setEditMode(true)}
-                    style={{
-                      fontSize: 12, fontWeight: 600,
-                      color: accentColor, background: accentColor + "15",
-                      border: "none", borderRadius: 8,
-                      padding: "6px 14px", cursor: "pointer", fontFamily: "inherit",
-                    }}
+                    className="btn sm"
                   >
                     Edit
                   </button>
@@ -247,24 +243,18 @@ export default function JournalHistoryCards({
                   <>
                     <button
                       onClick={() => { setEditMode(false); }}
-                      style={{
-                        fontSize: 12, fontWeight: 600,
-                        color: "var(--text-3)", background: "var(--bg-subtle)",
-                        border: "none", borderRadius: 8,
-                        padding: "6px 14px", cursor: "pointer", fontFamily: "inherit",
-                      }}
+                      className="btn sm"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={saveEdit}
                       disabled={saving}
+                      className="btn sm primary"
                       style={{
-                        fontSize: 12, fontWeight: 600,
-                        color: "#fff", background: saved ? "var(--c-fitness)" : accentColor,
-                        border: "none", borderRadius: 8,
-                        padding: "6px 14px", cursor: saving ? "not-allowed" : "pointer",
-                        fontFamily: "inherit", opacity: saving ? 0.7 : 1,
+                        cursor: saving ? "not-allowed" : "pointer",
+                        opacity: saving ? 0.7 : 1,
+                        ...(saved ? { background: "var(--ok-soft)", borderColor: "transparent", color: "var(--ok)" } : {}),
                       }}
                     >
                       {saving ? "Saving…" : saved ? "✓ Saved" : "Save"}
@@ -296,9 +286,9 @@ export default function JournalHistoryCards({
                     <input
                       type="range" min={1} max={10} value={editScore ?? 5}
                       onChange={e => setEditScore(Number(e.target.value))}
-                      style={{ flex: 1, accentColor }}
+                      style={{ flex: 1, accentColor: "var(--ink)" }}
                     />
-                    <span style={{ fontSize: 15, fontWeight: 700, color: accentColor, minWidth: 36 }}>{editScore ?? "—"}/10</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", minWidth: 36 }}>{editScore ?? "—"}/10</span>
                   </div>
                 </div>
               )}
@@ -314,7 +304,7 @@ export default function JournalHistoryCards({
                     style={{
                       width: "100%", boxSizing: "border-box",
                       padding: "10px 12px", fontSize: 13, lineHeight: 1.7,
-                      border: "1px solid var(--border)", borderRadius: "var(--radius-xs)",
+                      border: "1px solid var(--line)", borderRadius: "var(--r-s)",
                       fontFamily: "inherit", outline: "none", resize: "vertical",
                       background: "var(--surface)", color: "var(--text-1)",
                     }}
@@ -339,7 +329,7 @@ export default function JournalHistoryCards({
                       style={{
                         width: "100%", boxSizing: "border-box",
                         padding: "10px 12px", fontSize: 13, lineHeight: 1.7,
-                        border: "1px solid var(--border)", borderRadius: "var(--radius-xs)",
+                        border: "1px solid var(--line)", borderRadius: "var(--r-s)",
                         fontFamily: "inherit", outline: "none", resize: "vertical",
                         background: "var(--surface)", color: "var(--text-1)",
                       }}
@@ -365,7 +355,7 @@ export default function JournalHistoryCards({
                       style={{
                         width: "100%", boxSizing: "border-box",
                         padding: "10px 12px", fontSize: 13, lineHeight: 1.7,
-                        border: "1px solid var(--border)", borderRadius: "var(--radius-xs)",
+                        border: "1px solid var(--line)", borderRadius: "var(--r-s)",
                         fontFamily: "inherit", outline: "none", resize: "vertical",
                         background: "var(--surface)", color: "var(--text-1)",
                       }}

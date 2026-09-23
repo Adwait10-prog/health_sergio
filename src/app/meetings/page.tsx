@@ -31,7 +31,7 @@ export default async function MeetingsPage() {
 
         {/* Header */}
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: "var(--text-1)", margin: 0, letterSpacing: "-0.03em" }}>
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: "var(--ink)", margin: 0, letterSpacing: "-0.03em" }}>
             Meeting Notes
           </h1>
           <p style={{ fontSize: 13, color: "var(--text-3)", marginTop: 4 }}>
@@ -42,8 +42,8 @@ export default async function MeetingsPage() {
         {meetings.length === 0 ? (
           <div style={{
             background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
+            border: "1px solid var(--line)",
+            borderRadius: "var(--r)",
             padding: "48px 32px",
             textAlign: "center",
           }}>

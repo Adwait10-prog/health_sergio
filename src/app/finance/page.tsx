@@ -8,9 +8,9 @@ import PageSidebar from "@/components/layout/PageSidebar";
 export const dynamic = "force-dynamic";
 
 function runwayColor(months: number) {
-  if (months >= 12) return "var(--accent)";
-  if (months >= 6)  return "var(--gold)";
-  return "var(--warn)";
+  if (months >= 12) return "var(--ok)";
+  if (months >= 6)  return "var(--watch)";
+  return "var(--act)";
 }
 
 function fmtInr(n: number | null): string {
@@ -42,10 +42,10 @@ export default async function FinancePage() {
   const fiPct    = latest?.fiProgressPct ?? null;
 
   const topStats = [
-    { label: "Net Worth",       value: fmtInr(netWorth),                         color: "var(--finance)"  },
-    { label: "Liquid Cash",     value: fmtInr(latest?.liquidCashInr ?? null),    color: "var(--text)"     },
-    { label: "Monthly Savings", value: fmtInr(latest?.monthlySavingsInr ?? null), color: "var(--accent)"  },
-    { label: "FI Progress",     value: fiPct != null ? `${fiPct}%` : "—",        color: "var(--gold)"     },
+    { label: "Net Worth",       value: fmtInr(netWorth),                         color: "var(--ink)" },
+    { label: "Liquid Cash",     value: fmtInr(latest?.liquidCashInr ?? null),    color: "var(--ink)" },
+    { label: "Monthly Savings", value: fmtInr(latest?.monthlySavingsInr ?? null), color: "var(--ink)" },
+    { label: "FI Progress",     value: fiPct != null ? `${fiPct}%` : "—",        color: "var(--ink)" },
   ];
 
   return (
@@ -60,11 +60,11 @@ export default async function FinancePage() {
 
           {/* Top stats + runway */}
           <div
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
           >
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
               {topStats.map(({ label, value, color }) => (
-                <div key={label} style={{ background: "var(--bg-soft)", borderRadius: 8, padding: 12 }}>
+                <div key={label} style={{ background: "var(--surface-2)", borderRadius: "var(--r)", padding: 12 }}>
                   <p style={{ fontSize: 12, marginBottom: 2, color: "var(--text-muted)", margin: "0 0 2px" }}>{label}</p>
                   <p style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.2, color, margin: 0 }}>{value}</p>
                 </div>
@@ -74,9 +74,9 @@ export default async function FinancePage() {
             {/* Runway card */}
             <div
               style={{
-                background: "var(--bg-soft)",
-                border: `1px solid ${runway != null ? runwayColor(runway) : "var(--border)"}`,
-                borderRadius: 8,
+                background: "var(--surface-2)",
+                border: `1px solid ${runway != null ? runwayColor(runway) : "var(--line)"}`,
+                borderRadius: "var(--r)",
                 padding: 12,
                 display: "flex",
                 alignItems: "center",
@@ -96,7 +96,7 @@ export default async function FinancePage() {
                     fontWeight: 600,
                     padding: "6px 12px",
                     borderRadius: 9999,
-                    background: runwayColor(runway) + "20",
+                    background: `color-mix(in srgb, ${runwayColor(runway)} 13%, transparent)`,
                     color: runwayColor(runway),
                   }}
                 >
@@ -111,7 +111,7 @@ export default async function FinancePage() {
 
           {/* Net worth chart */}
           <div
-            style={{ background: "var(--bg-card)", boxShadow: "var(--shadow-sm)", border: "1px solid var(--border)", borderRadius: 12, padding: 16 }}
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r)", padding: 16 }}
           >
             <h2 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16, color: "var(--text)", margin: "0 0 16px" }}>Net Worth — last 12 months</h2>
             <NetWorthChart data={last12Logs} />

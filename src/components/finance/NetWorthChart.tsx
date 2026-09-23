@@ -44,7 +44,7 @@ export default function NetWorthChart({ data }: Props) {
               <rect
                 x={x} y={y} width={barW} height={h}
                 rx={4}
-                fill="var(--finance)"
+                fill="var(--ok)"
                 opacity={i === filtered.length - 1 ? 1 : 0.55}
               />
               <text
@@ -61,7 +61,7 @@ export default function NetWorthChart({ data }: Props) {
                   textAnchor="middle"
                   fontSize={9}
                   fontWeight="600"
-                  fill="var(--finance)"
+                  fill="var(--ok)"
                 >
                   {fmt(d.netWorthInr)}
                 </text>

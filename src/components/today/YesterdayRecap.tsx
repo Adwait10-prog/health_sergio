@@ -6,7 +6,7 @@ export default function YesterdayRecap({ log, label = "Today's vitals" }: Props)
   if (!log) {
     return (
       <div style={{
-        background: "var(--bg-subtle)", borderRadius: "var(--radius)", border: "1px solid var(--border-light)",
+        background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)",
         padding: 20,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -14,7 +14,7 @@ export default function YesterdayRecap({ log, label = "Today's vitals" }: Props)
             <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-1)" }}>{label}</span>
             <span style={{ fontSize: 13, color: "var(--text-3)", marginLeft: 12 }}>No vitals logged yet.</span>
           </div>
-          <a href="/log" style={{ fontSize: 13, fontWeight: 600, color: "var(--c-today)", textDecoration: "none" }}>Log now →</a>
+          <a href="/log" style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", textDecoration: "none" }}>Log now →</a>
         </div>
       </div>
     );
@@ -38,19 +38,19 @@ export default function YesterdayRecap({ log, label = "Today's vitals" }: Props)
 
   return (
     <div style={{
-      background: "var(--bg-subtle)", borderRadius: "var(--radius)", border: "1px solid var(--border-light)",
+      background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)",
       padding: 20,
     }}>
       <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-1)", margin: "0 0 14px" }}>{label}</h2>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
         {stats.map(({ label, value, good }) => (
           <div key={label} style={{
-            background: good ? "var(--c-fitness-bg)" : "var(--surface)",
-            borderRadius: "var(--radius-xs)", padding: "10px 12px",
-            border: good ? "1px solid #A7E3BC" : "1px solid var(--border-light)",
+            background: "var(--surface-2)",
+            borderRadius: "var(--r-s)", padding: "10px 12px",
+            border: "1px solid transparent",
           }}>
             <div style={{ fontSize: 11, color: "var(--text-4)", marginBottom: 3 }}>{label}</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: good ? "var(--c-fitness)" : "var(--text-1)" }}>{value}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: good ? "var(--ok)" : "var(--ink)" }}>{value}</div>
           </div>
         ))}
       </div>

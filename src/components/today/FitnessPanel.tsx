@@ -51,27 +51,29 @@ interface Props {
   inlineMode?: boolean; // when true, hides the training card (shown separately)
 }
 
+// Categorical activity palette — token-derived so it stays legible in dark mode.
+const STRENGTH = "color-mix(in srgb, var(--info) 55%, var(--act))";
 const TYPE_COLOR: Record<string, string> = {
-  Run: "var(--fitness)",
-  TrailRun: "var(--fitness)",
-  WeightTraining: "#8B5CF6",
-  Ride: "#F59E0B",
-  Swim: "#2563EB",
-  Walk: "var(--text-muted)",
-  Workout: "#EC4899",
+  Run: "var(--ok)",
+  TrailRun: "var(--ok)",
+  WeightTraining: STRENGTH,
+  Ride: "var(--watch)",
+  Swim: "var(--info)",
+  Walk: "var(--ink-3)",
+  Workout: "var(--act)",
 };
 const TYPE_BG: Record<string, string> = {
-  Run: "#D1FAE5",
-  TrailRun: "#A7F3D0",
-  WeightTraining: "#EDE9FE",
-  Ride: "#FEF3C7",
-  Swim: "#DBEAFE",
-  Walk: "var(--bg-soft)",
-  Workout: "#FCE7F3",
+  Run: "var(--ok-soft)",
+  TrailRun: "color-mix(in srgb, var(--ok) 24%, var(--surface))",
+  WeightTraining: `color-mix(in srgb, ${STRENGTH} 14%, var(--surface))`,
+  Ride: "var(--watch-soft)",
+  Swim: "var(--info-soft)",
+  Walk: "var(--surface-2)",
+  Workout: "var(--act-soft)",
 };
 
-function typeColor(t: string) { return TYPE_COLOR[t] ?? "var(--text-muted)"; }
-function typeBg(t: string) { return TYPE_BG[t] ?? "var(--bg-soft)"; }
+function typeColor(t: string) { return TYPE_COLOR[t] ?? "var(--ink-3)"; }
+function typeBg(t: string) { return TYPE_BG[t] ?? "var(--surface-2)"; }
 
 function typeIcon(t: string) {
   if (t === "Run" || t === "TrailRun") return "🏃";
@@ -83,26 +85,26 @@ function typeIcon(t: string) {
 }
 
 function sessionTypeBg(type: string) {
-  if (type === "gym_lc" || type === "gym_ub" || type === "gym_fb_light") return "#FEF3C7";
-  if (type === "easy") return "#D1FAE5";
-  if (type === "quality") return "#A7F3D0";
-  if (type === "long") return "var(--fitness)";
-  if (type === "swim") return "#DBEAFE";
-  if (type === "race") return "var(--fitness)";
-  return "var(--bg-soft)";
+  if (type === "gym_lc" || type === "gym_ub" || type === "gym_fb_light") return "var(--watch-soft)";
+  if (type === "easy") return "var(--ok-soft)";
+  if (type === "quality") return "color-mix(in srgb, var(--ok) 24%, var(--surface))";
+  if (type === "long") return "var(--ok)";
+  if (type === "swim") return "var(--info-soft)";
+  if (type === "race") return "var(--ok)";
+  return "var(--surface-2)";
 }
 function sessionTypeColor(type: string) {
-  if (type === "gym_lc" || type === "gym_ub" || type === "gym_fb_light") return "#B45309";
-  if (type === "easy" || type === "quality") return "#065F46";
-  if (type === "long" || type === "race") return "#fff";
-  if (type === "swim") return "#2563EB";
-  return "var(--text-muted)";
+  if (type === "gym_lc" || type === "gym_ub" || type === "gym_fb_light") return "var(--watch)";
+  if (type === "easy" || type === "quality") return "var(--ok)";
+  if (type === "long" || type === "race") return "#fff"; // on --ok, which stays dark in both themes
+  if (type === "swim") return "var(--info)";
+  return "var(--ink-3)";
 }
 
 function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
-    <div className="w-full rounded-full overflow-hidden" style={{ background: "var(--bg-soft)", height: 6 }}>
+    <div className="w-full rounded-full overflow-hidden" style={{ background: "var(--surface-2)", height: 6 }}>
       <div
         className="h-full rounded-full transition-all duration-500"
         style={{ width: `${pct}%`, background: color }}
@@ -138,11 +140,11 @@ export default function FitnessPanel({
       {/* Today's session hero — hidden in inlineMode (shown in sidebar instead) */}
       {!inlineMode && todaySession && (
         <div style={{
-          background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
-          padding: 20, boxShadow: "var(--shadow)",
+          background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)",
+          padding: 20,
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--c-fitness)", margin: 0 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-4)", margin: 0 }}>
               Today's training · Wk {weekNum}
             </p>
             <span style={{ fontSize: 11, color: "var(--text-4)" }}>
@@ -153,7 +155,7 @@ export default function FitnessPanel({
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{
                 fontSize: 18, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center",
-                borderRadius: 11, fontWeight: 700,
+                borderRadius: "var(--r)", fontWeight: 700,
                 background: sessionTypeBg(todaySession.type), color: sessionTypeColor(todaySession.type),
               }}>
                 {todaySession.type.startsWith("gym") ? "🏋️" :
@@ -174,11 +176,11 @@ export default function FitnessPanel({
             </div>
             {todaySession.logStatus ? (
               <span style={{
-                fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: 20,
-                background: todaySession.logStatus === "done" ? "var(--c-fitness-bg)" :
-                             todaySession.logStatus === "partial" ? "#FBF3E2" : "var(--bg-subtle)",
-                color: todaySession.logStatus === "done" ? "var(--c-fitness)" :
-                       todaySession.logStatus === "partial" ? "var(--c-today)" : "var(--text-4)",
+                fontSize: 11, fontWeight: 700, padding: "5px 12px", borderRadius: "var(--r-x)",
+                background: todaySession.logStatus === "done" ? "var(--ok-soft)" :
+                             todaySession.logStatus === "partial" ? "var(--watch-soft)" : "var(--surface-2)",
+                color: todaySession.logStatus === "done" ? "var(--ok)" :
+                       todaySession.logStatus === "partial" ? "var(--watch)" : "var(--ink-4)",
               }}>
                 {todaySession.logStatus === "done" ? "✓ Done" :
                  todaySession.logStatus === "partial" ? "~ Partial" : "Skipped"}
@@ -186,10 +188,8 @@ export default function FitnessPanel({
             ) : (
               <a
                 href="/log"
-                style={{
-                  fontSize: 11, fontWeight: 700, padding: "5px 14px", borderRadius: 20,
-                  background: "var(--c-fitness)", color: "#fff", textDecoration: "none",
-                }}
+                className="btn sm primary"
+                style={{ textDecoration: "none" }}
               >
                 Log it →
               </a>
@@ -200,19 +200,19 @@ export default function FitnessPanel({
 
       {/* Weekly progress + 4-week trend */}
       <div style={{
-        background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
-        padding: 24, boxShadow: "var(--shadow)",
+        background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)",
+        padding: 24,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>This week's mileage</h3>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--c-fitness)" }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>
             {currentWeekKm.toFixed(1)} / {currentWeekTargetKm} km
           </span>
         </div>
 
         {/* Progress bar */}
-        <div style={{ height: 6, background: "var(--bg-subtle)", borderRadius: 3, marginBottom: 4 }}>
-          <div style={{ width: `${weekPct}%`, height: "100%", background: "var(--c-fitness)", borderRadius: 3, transition: "width 0.7s ease" }} />
+        <div style={{ height: 6, background: "var(--surface-2)", borderRadius: 3, marginBottom: 4 }}>
+          <div style={{ width: `${weekPct}%`, height: "100%", background: "var(--ink)", borderRadius: 3, transition: "width 0.7s ease" }} />
         </div>
         <p style={{ fontSize: 11, color: "var(--text-4)", textAlign: "right", marginBottom: 16 }}>{weekPct}% of target</p>
 
@@ -227,7 +227,7 @@ export default function FitnessPanel({
                 <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-4)" }}>{b.km > 0 ? b.km : ""}</span>
                 <div style={{
                   width: "100%", height: `${Math.max((b.km / maxKm) * 44, b.km > 0 ? 3 : 0)}px`,
-                  background: isLast ? "var(--c-fitness)" : "var(--border-light)",
+                  background: isLast ? "var(--accent)" : "var(--line-2)",
                   borderRadius: 4, transition: "height 0.6s ease-out",
                 }} />
                 <span style={{ fontSize: 10, color: "var(--text-4)" }}>{b.label}</span>
@@ -239,8 +239,8 @@ export default function FitnessPanel({
 
       {/* Recent activities */}
       <div style={{
-        background: "var(--surface)", borderRadius: "var(--radius)", border: "1px solid var(--border)",
-        padding: 24, boxShadow: "var(--shadow)",
+        background: "var(--surface)", borderRadius: "var(--r)", border: "1px solid var(--line)",
+        padding: 24,
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text-1)", margin: 0 }}>Recent activities</h3>
@@ -258,10 +258,10 @@ export default function FitnessPanel({
             const dur = a.movingTimeSec ? formatDuration(a.movingTimeSec) : null;
             const dateLabel = istDayLabel(a.date);
             return (
-              <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--border-light)" }}>
+              <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
                 <span style={{
                   fontSize: 15, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
-                  borderRadius: 10, flexShrink: 0, background: typeBg(a.type),
+                  borderRadius: "var(--r)", flexShrink: 0, background: typeBg(a.type),
                 }}>
                   {typeIcon(a.type)}
                 </span>

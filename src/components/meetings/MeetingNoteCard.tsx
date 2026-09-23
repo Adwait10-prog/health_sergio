@@ -42,8 +42,8 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
   return (
     <div style={{
       background: "var(--surface)",
-      border: "1px solid var(--border)",
-      borderRadius: 12,
+      border: "1px solid var(--line)",
+      borderRadius: "var(--r)",
       overflow: "hidden",
     }}>
       {/* Header row */}
@@ -58,8 +58,8 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
         }}
       >
         <div style={{
-          width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-          background: "var(--c-founder-bg)",
+          width: 36, height: 36, borderRadius: "var(--r-s)", flexShrink: 0,
+          background: "var(--surface-2)",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 16,
         }}>
@@ -73,7 +73,7 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
             <span>{format(new Date(note.date), "EEE, d MMM yyyy")}</span>
             {note.attendees && <span>· 👥 {note.attendees}</span>}
             {actionLines.length > 0 && (
-              <span style={{ color: "var(--c-today)", fontWeight: 600 }}>
+              <span style={{ color: "var(--ink-2)", fontWeight: 600 }}>
                 · {actionLines.length} action item{actionLines.length > 1 ? "s" : ""}
               </span>
             )}
@@ -86,7 +86,7 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
 
       {/* Expanded content */}
       {expanded && (
-        <div style={{ padding: "0 16px 16px", borderTop: "1px solid var(--border)" }}>
+        <div style={{ padding: "0 16px 16px", borderTop: "1px solid var(--line)" }}>
 
           {/* Summary */}
           {note.summary && (
@@ -107,7 +107,7 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
                 Decisions
               </div>
               {note.decisions.split("\n").filter(l => l.trim()).map((d, i) => (
-                <div key={i} style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 4, paddingLeft: 12, borderLeft: "2px solid var(--c-founder)" }}>
+                <div key={i} style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 4, paddingLeft: 12, borderLeft: "2px solid var(--line-2)" }}>
                   {d}
                 </div>
               ))}
@@ -122,7 +122,7 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
               </div>
               {actionLines.map((item, i) => (
                 <div key={i} style={{ fontSize: 13, color: "var(--text-2)", marginBottom: 4, display: "flex", gap: 8, alignItems: "flex-start" }}>
-                  <span style={{ color: "var(--c-today)", marginTop: 1 }}>→</span>
+                  <span style={{ color: "var(--ink-4)", marginTop: 1 }}>→</span>
                   <span>{item}</span>
                 </div>
               ))}
@@ -132,14 +132,9 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
                 <button
                   onClick={createTasksFromActions}
                   disabled={creatingTasks}
+                  className="btn sm primary"
                   style={{
                     marginTop: 10,
-                    padding: "6px 14px",
-                    background: "var(--c-today)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 6,
-                    fontSize: 12,
                     fontWeight: 600,
                     cursor: creatingTasks ? "not-allowed" : "pointer",
                     opacity: creatingTasks ? 0.7 : 1,
@@ -148,7 +143,7 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
                   {creatingTasks ? "Creating..." : "＋ Add to Today's Tasks"}
                 </button>
               ) : (
-                <div style={{ marginTop: 10, fontSize: 12, color: "var(--c-today)", fontWeight: 600 }}>
+                <div style={{ marginTop: 10, fontSize: 12, color: "var(--ok)", fontWeight: 600 }}>
                   ✅ Tasks added to Today's list
                 </div>
               )}
@@ -171,8 +166,8 @@ export default function MeetingNoteCard({ note }: { note: MeetingNote }) {
               {showTranscript && (
                 <p style={{
                   fontSize: 12, color: "var(--text-3)", marginTop: 8,
-                  background: "var(--surface-2, #f5f5f5)",
-                  padding: "10px 12px", borderRadius: 8,
+                  background: "var(--surface-2)",
+                  padding: "10px 12px", borderRadius: "var(--r-s)",
                   lineHeight: 1.6, fontStyle: "italic",
                 }}>
                   "{note.rawTranscript}"
