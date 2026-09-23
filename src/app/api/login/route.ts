@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE, SESSION_MAX_AGE, isCorrectPassword, safeNextPath, sessionToken } from "@/lib/auth";
+import { SESSION_COOKIE, SESSION_MAX_AGE, isCorrectLogin, safeNextPath, sessionToken } from "@/lib/auth";
 
 // POST /api/login — form post from /login. Sets the session cookie on success.
 export async function POST(req: NextRequest) {
   const form = await req.formData();
+  const username = String(form.get("username") ?? "");
   const password = String(form.get("password") ?? "");
   const next = safeNextPath(String(form.get("next") ?? "/"));
   const token = sessionToken();
 
-  if (!token || !isCorrectPassword(password)) {
+  if (!token || !isCorrectLogin(username, password)) {
     await new Promise(r => setTimeout(r, 600)); // slow down guessing
     const back = new URL("/login", req.url);
     back.searchParams.set("e", "1");

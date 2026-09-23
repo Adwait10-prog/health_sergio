@@ -22,9 +22,14 @@ export function isValidSession(value: string | undefined): boolean {
   return !!expected && !!value && safeEqual(value, expected);
 }
 
-export function isCorrectPassword(password: string): boolean {
-  const expected = process.env.LOGIN_PASSWORD;
-  return !!expected && safeEqual(password, expected);
+export function isCorrectLogin(username: string, password: string): boolean {
+  const expectedUser = process.env.LOGIN_USERNAME;
+  const expectedPass = process.env.LOGIN_PASSWORD;
+  if (!expectedUser || !expectedPass) return false;
+  // evaluate both so timing doesn't reveal which one was wrong
+  const userOk = safeEqual(username.trim().toLowerCase(), expectedUser.toLowerCase());
+  const passOk = safeEqual(password, expectedPass);
+  return userOk && passOk;
 }
 
 // Shared-secret check for machine endpoints (cron, health sync).

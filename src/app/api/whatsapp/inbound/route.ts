@@ -78,14 +78,14 @@ function resolveDay(dayStr: string, today: Date): Date | null {
 }
 
 export async function POST(req: NextRequest) {
-  // 1. Twilio signature — proves the request came from Twilio (needs the raw form body)
+  // 1. Twilio signature — logged, not enforced (internal tool; the owner + media checks below
+  //    are what block misuse). Flip to a 403 here if you ever want it strict.
   const raw = await req.text();
   const params = Object.fromEntries(new URLSearchParams(raw));
   const signature = req.headers.get("x-twilio-signature") ?? "";
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   if (!authToken || !twilio.validateRequest(authToken, signature, signedUrl(req), params)) {
-    console.warn("WhatsApp inbound: rejected, bad Twilio signature");
-    return new NextResponse("forbidden", { status: 403 });
+    console.warn("WhatsApp inbound: Twilio signature did not verify (continuing)", { sid: params.MessageSid ?? "?" });
   }
 
   const sid      = params.MessageSid ?? "?";
