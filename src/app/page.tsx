@@ -4,6 +4,7 @@ import { OS } from "@/lib/osData";
 import { dayMonth, istDayLabel } from "@/lib/date";
 import StatBox, { Spark } from "@/components/today/StatBox";
 import OutcomeCard, { DraftEodButton } from "@/components/today/OutcomeCard";
+import { JarvisSessionButton } from "@/components/jarvis/Jarvis";
 import ThreeChecklist from "@/components/today/ThreeChecklist";
 import BlockChart from "@/components/today/BlockChart";
 import StreamsBar from "@/components/today/StreamsBar";
@@ -60,6 +61,8 @@ export default async function TodayPage() {
           <span className="meta">{dateline}</span>
         </div>
         <div className="right">
+          {nowIST.getUTCHours() < 13 && <JarvisSessionButton mode="morning" label="Morning check-in" />}
+          {nowIST.getUTCHours() >= 17 && <JarvisSessionButton mode="evening" label="Evening wrap-up" />}
           <DraftEodButton />
           <ThemeToggle compact />
         </div>

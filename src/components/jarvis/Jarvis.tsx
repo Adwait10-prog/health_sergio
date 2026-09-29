@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ConversationProvider, useConversation } from "@elevenlabs/react";
 
 type Line = { role: "user" | "agent"; text: string };
+type Mode = "morning" | "evening" | "open";
 
 const PAGES: Record<string, string> = {
   today: "/", os: "/os", fitness: "/fitness", technical: "/technical", work: "/work",
@@ -89,7 +90,7 @@ function JarvisPanel() {
     try { conversation.sendContextualUpdate(`He switched to the ${pageName(pathname)} page.`); } catch { /* disconnected */ }
   }, [pathname, live, conversation]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (mode: Mode = "open") => {
     setError(null);
     linesRef.current = [];
     setLines([]);
@@ -99,7 +100,7 @@ function JarvisPanel() {
       setError("Microphone access is blocked — allow it in the browser to talk.");
       return;
     }
-    const res = await fetch("/api/agent/session", { cache: "no-store" });
+    const res = await fetch(`/api/agent/session?mode=${mode}`, { cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setError(data.error ?? "Couldn't start Jarvis."); return; }
     try {
@@ -130,7 +131,12 @@ function JarvisPanel() {
 
   // J key / os:jarvis event
   useEffect(() => {
-    const onEvt = () => toggle();
+    const onEvt = (e: Event) => {
+      const mode = (e as CustomEvent<{ mode?: Mode }>).detail?.mode;
+      if (!mode) return toggle();
+      setOpen(true);
+      if (status === "disconnected") void start(mode);
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
@@ -141,7 +147,7 @@ function JarvisPanel() {
     window.addEventListener("os:jarvis", onEvt);
     window.addEventListener("keydown", onKey);
     return () => { window.removeEventListener("os:jarvis", onEvt); window.removeEventListener("keydown", onKey); };
-  }, [toggle, open]);
+  }, [toggle, open, status, start]);
 
   // Orb follows whoever is talking (read per frame, no re-renders)
   useEffect(() => {
@@ -220,13 +226,26 @@ function JarvisPanel() {
           </>
         ) : (
           <>
-            <button className="btn sm" onClick={toggle}>Close</button>
-            <button className="btn sm primary" style={{ marginLeft: "auto" }} onClick={() => void start()} disabled={status === "connecting"}>
-              {status === "connecting" ? "Connecting…" : "Start"}
-            </button>
+            <button className="btn sm ghost" onClick={toggle}>Close</button>
+            <span style={{ marginLeft: "auto", display: "flex", gap: "var(--s2)" }}>
+              <button className="btn sm" onClick={() => void start("morning")} disabled={status === "connecting"}>Morning</button>
+              <button className="btn sm" onClick={() => void start("evening")} disabled={status === "connecting"}>Evening</button>
+              <button className="btn sm primary" onClick={() => void start("open")} disabled={status === "connecting"}>
+                {status === "connecting" ? "Connecting…" : "Just talk"}
+              </button>
+            </span>
           </>
         )}
       </div>
     </section>
+  );
+}
+
+// A button anywhere in the app that opens Jarvis straight into a routine
+export function JarvisSessionButton({ mode, label }: { mode: Mode; label: string }) {
+  return (
+    <button className="btn sm" onClick={() => window.dispatchEvent(new CustomEvent("os:jarvis", { detail: { mode } }))}>
+      <span className="jarvis-dot" /> {label}
+    </button>
   );
 }

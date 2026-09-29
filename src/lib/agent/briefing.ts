@@ -10,14 +10,17 @@ import { computeMode, daysUntil, istToday } from "../osLogic";
 const DAY = 86400000;
 const istNow = () => new Date(Date.now() + 5.5 * 3600000);
 
-export async function buildBriefing(): Promise<{ briefing: string; greeting: string }> {
+export type SessionMode = "morning" | "evening" | "open";
+
+export async function buildBriefing(sessionMode: SessionMode = "open"): Promise<{ briefing: string; greeting: string }> {
   const userId = getUserId();
   const osDay = istToday();
   const todayDB = todayUTC();
   const dow = (osDay.getUTCDay() + 6) % 7;
   const mondayDB = new Date(todayDB.getTime() - dow * DAY);
 
-  const [metrics, three, threeTicks, openTicks, eod, tasks, wip, runs, lastRun, vitals, lastTalk, session, week, raceDays] = await Promise.all([
+  const yesterdayDB = new Date(todayDB.getTime() - DAY);
+  const [metrics, three, threeTicks, openTicks, eod, tasks, wip, runs, lastRun, vitals, lastTalk, session, week, raceDays, yEod, ySession] = await Promise.all([
     db.metric.findMany({ orderBy: { date: "desc" }, take: 30 }),
     db.osNote.findUnique({ where: { key: "three" } }),
     db.osChecklistItem.findMany({ where: { listKey: `three:${todayKey()}` } }),
@@ -35,6 +38,8 @@ export async function buildBriefing(): Promise<{ briefing: string; greeting: str
     getTodayHMSession(),
     getCurrentWeekHMStats(),
     getRaceCountdown(),
+    db.eodUpdate.findUnique({ where: { date: yesterdayDB } }),
+    db.hMSession.findFirst({ where: { userId, date: { gte: yesterdayDB, lt: todayDB } }, include: { log: true } }),
   ]);
 
   const mode = computeMode(osDay);
@@ -64,6 +69,11 @@ export async function buildBriefing(): Promise<{ briefing: string; greeting: str
     ? `Today's three: ${threeLines.map((l, i) => `${i + 1}) ${l}${ticked.has(i) ? " [done]" : ""}`).join("; ")}.`
     : "Today's three: not set.");
 
+  const yParts = [
+    yEod && `EoD outcome "${yEod.outcome}"`,
+    ySession && `training "${ySession.name}" ${ySession.log?.status ?? "not logged"}`,
+  ].filter(Boolean);
+  if (yParts.length) lines.push(`Yesterday: ${yParts.join("; ")}.`);
   lines.push(eod ? `EoD: drafted${eod.final ? " and posted" : ""} — outcome "${eod.outcome}".` : "EoD: not drafted yet today.");
 
   // Training
@@ -102,8 +112,13 @@ export async function buildBriefing(): Promise<{ briefing: string; greeting: str
   }
 
   const part = hour < 12 ? "Morning" : hour < 17 ? "Afternoon" : "Evening";
-  const hint = !eod && hour >= 17 ? "EoD's not drafted yet." : !threeLines.length ? "No three set for today yet." : session && !session.logStatus ? `${session.name} is still on the list today.` : "";
-  const greeting = `${part}, Adwait.${hint ? ` ${hint}` : ""} What do you need?`;
+  let greeting: string;
+  if (sessionMode === "morning") greeting = `Morning, Adwait. Quick run-through — two minutes.`;
+  else if (sessionMode === "evening") greeting = `Evening, Adwait. Let's close out the day.`;
+  else {
+    const hint = !eod && hour >= 17 ? "EoD's not drafted yet." : !threeLines.length ? "No three set for today yet." : session && !session.logStatus ? `${session.name} is still on the list today.` : "";
+    greeting = `${part}, Adwait.${hint ? ` ${hint}` : ""} What do you need?`;
+  }
 
   return { briefing: lines.join("\n"), greeting };
 }
