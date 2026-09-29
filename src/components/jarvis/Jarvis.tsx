@@ -38,8 +38,8 @@ function JarvisPanel() {
   const save = useCallback((ended = false) => {
     if (!convId.current || linesRef.current.length === 0) return;
     const body = JSON.stringify({ conversationId: convId.current, messages: linesRef.current, ended });
-    if (ended && navigator.sendBeacon) navigator.sendBeacon("/api/agent/transcript", new Blob([body], { type: "application/json" }));
-    else fetch("/api/agent/transcript", { method: "POST", headers: { "Content-Type": "application/json" }, body }).catch(() => {});
+    // keepalive lets the final save finish even if the tab navigates or closes
+    fetch("/api/agent/transcript", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: ended }).catch(() => {});
   }, []);
 
   const conversation = useConversation({
@@ -90,8 +90,9 @@ function JarvisPanel() {
   }, [conversation]);
 
   const stop = useCallback(async () => {
+    save(true); // don't rely on the disconnect callback firing before the tab moves on
     try { conversation.endSession(); } catch { /* already closed */ }
-  }, [conversation]);
+  }, [conversation, save]);
 
   const toggle = useCallback(() => {
     if (!open) {
