@@ -89,7 +89,9 @@ export async function buildBriefing(): Promise<{ briefing: string; greeting: str
     .filter(c => c.days == null || c.days >= 0)
     .sort((a, b) => (a.days ?? -1) - (b.days ?? -1))
     .slice(0, 6);
-  lines.push(`Coming up: ${upcoming.map(c => c.days == null ? `${c.label} (${c.text})` : `${c.label} in ${c.days} days (${dayMonth(c.date!)})`).join("; ")}.`);
+  const nextDated = upcoming.find(c => c.days != null);
+  if (nextDated) lines.push(`Next dated countdown: ${nextDated.label} in ${nextDated.days} days (${dayMonth(nextDated.date!)}).`);
+  lines.push(`Coming up, in order: ${upcoming.map(c => c.days == null ? `${c.label} (${c.text})` : `${c.label} in ${c.days} days (${dayMonth(c.date!)})`).join("; ")}.`);
   const doneIds = new Set(openTicks.map(t => t.itemId));
   const open = OS.open.filter(o => !doneIds.has(o.id));
   lines.push(`Open items (${open.length}): ${open.slice(0, 5).map(o => o.label).join("; ")}.`);

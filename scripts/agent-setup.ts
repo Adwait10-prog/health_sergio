@@ -133,7 +133,18 @@ async function main() {
       tts: { model_id: TTS_MODEL, voice_id: VOICE_ID, stability: 0.55, similarity_boost: 0.8, speed: 1.05 },
       conversation: { max_duration_seconds: 1800 },
     },
-    platform_settings: { auth: { enable_auth: true } },
+    platform_settings: {
+      auth: { enable_auth: true },
+      // Keep nothing on ElevenLabs' side (the workspace admins would see it). Our own copy lives in AgentConversation.
+      privacy: {
+        zero_retention_mode: true,
+        record_voice: false,
+        retention_days: -1, // required with zero retention (nothing is kept anyway)
+        delete_transcript_and_pii: true,
+        delete_audio: true,
+        apply_to_existing_conversations: true,
+      },
+    },
   };
 
   const agentId = process.env.ELEVENLABS_AGENT_ID;
