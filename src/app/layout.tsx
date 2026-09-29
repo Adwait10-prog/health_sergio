@@ -3,6 +3,7 @@ import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/layout/BottomNav";
 import Shortcuts from "@/components/layout/Shortcuts";
+import Jarvis from "@/components/jarvis/Jarvis";
 
 export const metadata: Metadata = {
   title: "Personal OS",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="app-main">{children}</main>
         <BottomNav />
         <Shortcuts />
+        <Jarvis />
       </body>
     </html>
   );

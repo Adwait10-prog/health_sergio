@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, isValidSession } from "@/lib/auth";
 
 // Machine endpoints authenticate themselves: Twilio signature, Asana HMAC,
-// health-sync token, cron bearer. Everything else requires the session cookie.
+// health-sync token, cron bearer, agent tool key. Everything else requires the session cookie.
 const PUBLIC = [
   /^\/login$/,
   /^\/api\/login$/,
@@ -11,6 +11,7 @@ const PUBLIC = [
   /^\/api\/asana\/webhook$/,
   /^\/api\/asana\/sync$/,
   /^\/api\/health-sync$/,
+  /^\/api\/agent\/tool\/[a-z_]+$/, // ElevenAgents webhook tools (x-agent-key)
 ];
 
 export function proxy(req: NextRequest) {

@@ -223,6 +223,27 @@ input,textarea{font:inherit;color:inherit}
 .masonry>*{break-inside:avoid;margin-bottom:var(--s3);display:block}
 .rail{display:grid;grid-template-columns:minmax(0,1fr) clamp(280px,24vw,420px);gap:var(--s4);align-items:start}
 
+/* ── Jarvis (voice panel) ── */
+.jarvis-launch{position:fixed;right:24px;bottom:24px;z-index:40;display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:var(--r-x);background:var(--surface);border:1px solid var(--line-2);font-size:var(--t-body);font-weight:500;color:var(--ink);cursor:pointer}
+.jarvis-launch:hover{background:var(--surface-2)}
+.jarvis-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.jarvis{position:fixed;right:24px;bottom:24px;z-index:40;width:380px;max-height:min(72vh,640px);display:flex;flex-direction:column;gap:var(--s3);padding:var(--s4);background:var(--surface);border:1px solid var(--line-2);border-radius:var(--r)}
+.jarvis-stage{display:grid;place-items:center;height:132px}
+.jarvis-orb{width:88px;height:88px;border-radius:50%;background:var(--surface-2);border:1.5px solid var(--line-2);transition:transform 90ms linear,background var(--fast),border-color var(--fast)}
+.jarvis-orb.listening{background:var(--surface);border:2px solid var(--ink)}
+.jarvis-orb.speaking{background:radial-gradient(circle at 40% 35%,color-mix(in srgb,var(--accent) 70%,#fff),var(--accent));border-color:var(--accent);box-shadow:0 0 0 8px var(--accent-soft)}
+.jarvis-orb.connecting{animation:jarvis-pulse 1.1s ease-in-out infinite}
+.jarvis-orb.error{border-color:var(--act)}
+@keyframes jarvis-pulse{0%,100%{opacity:.45}50%{opacity:1}}
+.jarvis-lines{flex:1;min-height:60px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.jarvis-line{max-width:88%;padding:7px 10px;border-radius:10px;font-size:var(--t-body);line-height:1.4}
+.jarvis-line.user{align-self:flex-end;background:var(--ink);color:var(--bg);border-bottom-right-radius:3px}
+.jarvis-line.agent{align-self:flex-start;background:var(--surface-2);color:var(--ink);border-bottom-left-radius:3px}
+@media (max-width:760px){
+  .jarvis-launch{bottom:80px;right:16px}
+  .jarvis{left:12px;right:12px;bottom:76px;width:auto;max-height:70vh}
+}
+
 /* ── Responsive ── */
 @media (max-width:980px){
   .stats{grid-template-columns:repeat(3,1fr)}

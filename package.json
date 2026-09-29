@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.99.0",
+    "@elevenlabs/react": "^1.15.2",
     "@neondatabase/serverless": "^1.1.0",
     "@prisma/adapter-better-sqlite3": "^7.8.0",
     "@prisma/adapter-neon": "^7.8.0",

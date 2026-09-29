@@ -471,3 +471,15 @@ model OsNote {
   text      String
   updatedAt DateTime @updatedAt
 }
+
+// Voice conversations with the Jarvis agent (ElevenAgents). Transcript kept so the next
+// conversation can pick up where the last one left off.
+model AgentConversation {
+  id             String    @id @default(cuid())
+  conversationId String    @unique           // ElevenLabs conversation id
+  channel        String    @default("web")   // "web" | "phone"
+  startedAt      DateTime  @default(now())
+  endedAt        DateTime?
+  transcript     String                      // JSON [{role:"user"|"agent", text}]
+  userLines      String?                     // what I said, joined — used for recall
+}
