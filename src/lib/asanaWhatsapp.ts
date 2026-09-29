@@ -18,7 +18,7 @@ const KNOWN_PROJECTS: Record<string, string> = {
   "media rian":                "1215471459454088",
 };
 
-const PROJECT_NAMES: Record<string, string> = {
+export const PROJECT_NAMES: Record<string, string> = {
   "1213036075688995": "Core Engineering",
   "1213024317030114": "Media Squad",
   "1213079508921410": "Japan Market Entry",

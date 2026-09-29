@@ -9,6 +9,17 @@ import { handlers } from "../wa/intents";
 import { todayIST, type Ctx } from "../wa/context";
 import type { ParsedMessage } from "../whatsapp";
 import { buildBriefing } from "./briefing";
+import { patchDailyLog } from "../wa/store";
+import { createAsanaTaskFromWhatsApp, resolveProject, PROJECT_NAMES } from "../asanaWhatsapp";
+
+const HABITS = ["read", "meditate", "code", "learn", "network", "journal"] as const;
+const HABIT_FIELD: Record<(typeof HABITS)[number], string> = {
+  read: "didRead", meditate: "didMeditate", code: "didCode", learn: "didLearn", network: "didNetwork", journal: "didJournal",
+};
+
+function voiceCtx(): Ctx {
+  return { userId: getUserId(), today: todayIST(), from: "voice", sid: "voice", text: "", reply: async () => {} };
+}
 
 type Prop = { type: "string" | "number" | "boolean" | "integer"; description: string; enum?: string[] };
 type Args = Record<string, unknown>;
@@ -171,17 +182,101 @@ export const AGENT_TOOLS: AgentTool[] = [
       return `Number ${n} ${done ? "ticked" : "unticked"}.`;
     },
   },
+  {
+    name: "log_checkin",
+    description: "Log today's check-in into his daily log: mood, energy, stress (1-10), sleep hours, water litres, and habits done (read, meditate, code, learn, network, journal). Pass only what he actually said; leave the rest empty/0. Workouts come from Strava automatically.",
+    params: {
+      mood: { type: "integer", description: "Mood 1-10, or 0 if not said" },
+      energy: { type: "integer", description: "Energy 1-10, or 0 if not said" },
+      stress: { type: "integer", description: "Stress 1-10, or 0 if not said" },
+      sleep_hours: { type: "number", description: "Hours slept last night, or 0 if not said" },
+      water_litres: { type: "number", description: "Litres of water today, or 0 if not said" },
+      habits: { type: "string", description: "Comma-separated habits done today from: read, meditate, code, learn, network, journal. Empty if none." },
+    },
+    write: true,
+    run: async (a) => {
+      const n = (v: unknown, max: number) => { const x = Number(v); return x > 0 && x <= max ? x : undefined; };
+      const fields: Record<string, unknown> = {
+        moodScore: n(a.mood, 10), energyLevel: n(a.energy, 10), stressLevel: n(a.stress, 10),
+        sleepMin: n(a.sleep_hours, 16) ? Math.round(Number(a.sleep_hours) * 60) : undefined,
+        waterL: n(a.water_litres, 10),
+      };
+      const habits = str(a.habits).toLowerCase().split(/[,\s]+/).filter((h): h is (typeof HABITS)[number] => (HABITS as readonly string[]).includes(h));
+      for (const h of habits) fields[HABIT_FIELD[h]] = true;
+      const saved = Object.entries(fields).filter(([, v]) => v !== undefined);
+      if (!saved.length) return "Nothing to log — ask what he wants recorded.";
+      await patchDailyLog(voiceCtx(), Object.fromEntries(saved));
+      const said = [
+        fields.moodScore && `mood ${fields.moodScore}`, fields.energyLevel && `energy ${fields.energyLevel}`,
+        fields.stressLevel && `stress ${fields.stressLevel}`, fields.sleepMin && `sleep ${Number(a.sleep_hours)} h`,
+        fields.waterL && `water ${fields.waterL} L`, habits.length && `habits: ${habits.join(", ")}`,
+      ].filter(Boolean);
+      return `Logged ${said.join("; ")}.`;
+    },
+  },
+  {
+    name: "create_asana_task",
+    description: `Create a real Asana task for his team. Needs a project; projects: ${Object.values(PROJECT_NAMES).join(", ")}. If he didn't name a project, ask which one before calling. Section (e.g. WIP, Backlog, Exploring) and assignee are optional.`,
+    params: {
+      description: { type: "string", description: "What the task is, with all the detail he gave, verbatim" },
+      title: { type: "string", description: "Short task title if he gave one, else empty" },
+      project: { type: "string", description: "Project name" },
+      section: { type: "string", description: "Section/column if named, else empty" },
+      assignee: { type: "string", description: "Person's name if he said who, else empty" },
+    },
+    required: ["description", "project"],
+    write: true,
+    run: async (a) => {
+      if (!resolveProject(str(a.project) || null)) {
+        return `No project matches "${str(a.project)}". Ask him which: ${Object.values(PROJECT_NAMES).join(", ")}.`;
+      }
+      const res = await createAsanaTaskFromWhatsApp({
+        taskTitle: str(a.title) || null, taskDescription: str(a.description), projectHint: str(a.project),
+        sectionHint: str(a.section) || null, assigneeHint: str(a.assignee) || null, phone: "voice", skipPendingCheck: true,
+      });
+      return res.message;
+    },
+  },
+  {
+    name: "reschedule_session",
+    description: "Move or swap a half-marathon training session between days, e.g. 'do tomorrow's run today' (from tomorrow to today) or 'move Wednesday's run to Friday'.",
+    params: {
+      from_day: { type: "string", enum: ["today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], description: "Day the session is on now" },
+      to_day: { type: "string", enum: ["today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], description: "Day to move it to" },
+    },
+    required: ["from_day", "to_day"],
+    write: true,
+    run: (a) => viaIntent("reschedule_session", { fromDay: str(a.from_day), toDay: str(a.to_day) }),
+  },
+  {
+    name: "skip_session",
+    description: "Skip a training session (mark it as rest).",
+    params: {
+      day: { type: "string", enum: ["today", "tomorrow", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"], description: "Which day's session" },
+      reason: { type: "string", description: "Why, if he said; else empty" },
+    },
+    required: ["day"],
+    write: true,
+    run: (a) => viaIntent("skip_session", { day: str(a.day) || "today", reason: str(a.reason) || null }),
+  },
 ];
 
 export const TOOL_BY_NAME = new Map(AGENT_TOOLS.map(t => [t.name, t]));
 
 // Client tools run in the browser (the Jarvis panel), not on the server
-export const CLIENT_TOOLS: { name: string; description: string; params: Record<string, Prop>; required: string[] }[] = [
+export const CLIENT_TOOLS: { name: string; description: string; params: Record<string, Prop>; required: string[]; expectsResponse?: boolean }[] = [
   {
     name: "navigate",
     description: "Open a page of his OS on screen when he asks to see or open something.",
     params: { page: { type: "string", enum: ["today", "os", "fitness", "technical", "work", "founder", "finance", "reflection", "meetings"], description: "Which page" } },
     required: ["page"],
+  },
+  {
+    name: "read_screen",
+    description: "Read what's on his screen right now (the page he has open). Use when he says 'this', 'what am I looking at', or asks about something on the page.",
+    params: {},
+    required: [],
+    expectsResponse: true,
   },
   {
     name: "refresh_view",

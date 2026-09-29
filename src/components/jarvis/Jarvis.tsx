@@ -23,8 +23,19 @@ export default function Jarvis() {
   );
 }
 
+const pageName = (path: string) =>
+  Object.entries(PAGES).find(([, href]) => href === path)?.[0] ?? path.replace(/^\//, "").replace(/\//g, " ");
+
+// Visible text of the page (the Jarvis panel lives outside .app-main, so it isn't included)
+function screenText(): string {
+  const main = document.querySelector(".app-main") as HTMLElement | null;
+  const text = (main?.innerText ?? "").replace(/[ \t]+/g, " ").replace(/\n{2,}/g, "\n").trim();
+  return text.length > 4000 ? `${text.slice(0, 4000)}…` : text;
+}
+
 function JarvisPanel() {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +61,13 @@ function JarvisPanel() {
         return href ? `Opened ${page}.` : `No page called ${page}.`;
       },
       refresh_view: () => { router.refresh(); return "Refreshed."; },
+      read_screen: () => `Page: ${pageName(window.location.pathname)}\n${screenText() || "(empty)"}`,
     },
-    onConnect: ({ conversationId }) => { convId.current = conversationId; setError(null); },
+    onConnect: ({ conversationId }) => {
+      convId.current = conversationId;
+      setError(null);
+      try { conversation.sendContextualUpdate(`He has the ${pageName(window.location.pathname)} page open.`); } catch { /* not ready */ }
+    },
     onMessage: ({ message, role }) => {
       if (!message?.trim()) return;
       const next = [...linesRef.current, { role, text: message }];
@@ -64,6 +80,14 @@ function JarvisPanel() {
   });
   const { status, isSpeaking, isMuted, setMuted } = conversation;
   const live = status === "connected";
+
+  // Tell Jarvis when he switches pages mid-conversation (no reply triggered)
+  const lastPage = useRef(pathname);
+  useEffect(() => {
+    if (!live || lastPage.current === pathname) return;
+    lastPage.current = pathname;
+    try { conversation.sendContextualUpdate(`He switched to the ${pageName(pathname)} page.`); } catch { /* disconnected */ }
+  }, [pathname, live, conversation]);
 
   const start = useCallback(async () => {
     setError(null);

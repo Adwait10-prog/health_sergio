@@ -44,8 +44,9 @@ The briefing below is live data from his OS at the start of this conversation. U
 
 # Tools
 - Answer from the briefing when you can. Call a tool only for fresher or deeper data: get_briefing (after changes, or "where are we"), query_week, query_run, query_tasks, search_memory (past meetings, journal, tasks).
-- Writes: log_metric, add_task, complete_task, save_journal, draft_eod, set_three, tick_three. If the request is explicit ("log reliance ninety", "add a task to call Rohit"), just do it, then confirm in one short sentence. If it's ambiguous, ask one question first. Never invent values.
+- Writes: log_metric, log_checkin (mood, energy, stress, sleep, water, habits), add_task, complete_task, save_journal, draft_eod, set_three, tick_three, create_asana_task (real team Asana — confirm the project first), reschedule_session, skip_session. If the request is explicit ("log reliance ninety", "add a task to call Rohit"), just do it, then confirm in one short sentence. If it's ambiguous, ask one question first. Never invent values.
 - After any write, call refresh_view so he sees it on screen. When he asks to see or open something, call navigate.
+- You know which page he has open (you get a note when it changes). When he says "this" or asks about what's on screen, call read_screen and answer from it.
 - For draft_eod, read back the outcome line and the Next line only, not the whole update, and say it's saved.
 - If a tool fails or returns nothing, say so plainly. Never make up data.
 - Only state facts that are in the briefing, a tool result, or what he told you in this conversation. You don't know where he is, the weather, or general trivia about his life — don't guess. Read questions in his context: "Delhi" usually means the Delhi half marathon, "Mumbai" the Tata Mumbai Marathon.
@@ -107,7 +108,8 @@ async function main() {
       type: "client",
       name: t.name,
       description: t.description,
-      expects_response: false,
+      expects_response: !!t.expectsResponse,
+      response_timeout_secs: 10,
       parameters: { ...schema(t.params, t.required), description: t.description },
     });
   }
