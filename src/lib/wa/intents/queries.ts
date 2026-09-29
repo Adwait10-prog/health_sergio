@@ -37,13 +37,15 @@ export const queryToday: Handler = async (ctx) => {
 
 export const queryWeek: Handler = async (ctx) => {
   const weekStart = subDays(ctx.today, 7);
-  const [reflections, dailyLogs] = await Promise.all([
+  const [reflections, dailyLogs, activities] = await Promise.all([
     db.reflection.findMany({ where: { userId: ctx.userId, type: "daily", date: { gte: weekStart } }, orderBy: { date: "desc" } }),
     db.dailyLog.findMany({ where: { userId: ctx.userId, date: { gte: weekStart } }, orderBy: { date: "desc" } }),
+    db.stravaActivity.findMany({ where: { userId: ctx.userId, date: { gte: weekStart } }, select: { date: true, type: true, distanceM: true, movingTimeSec: true } }),
   ]);
   const summary = await generateWeekSummary(
     reflections.map(r => ({ date: r.date, journalText: r.journalText, weeklyScore: r.weeklyScore })),
     dailyLogs.map(l => ({ date: l.date, moodScore: l.moodScore, didWorkout: l.didWorkout, didJournal: l.didJournal })),
+    activities,
   );
   await ctx.reply(summary);
 };

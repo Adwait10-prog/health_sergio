@@ -270,8 +270,12 @@ export async function parseWhatsAppMessage(text: string): Promise<ParsedMessage>
   }
 }
 
-export async function generateWeekSummary(reflections: Array<{ date: Date; journalText?: string | null; weeklyScore?: number | null }>, dailyLogs: Array<{ date: Date; moodScore?: number | null; didWorkout?: boolean; didJournal?: boolean }>): Promise<string> {
-  if (reflections.length === 0 && dailyLogs.length === 0) {
+export async function generateWeekSummary(
+  reflections: Array<{ date: Date; journalText?: string | null; weeklyScore?: number | null }>,
+  dailyLogs: Array<{ date: Date; moodScore?: number | null; didWorkout?: boolean; didJournal?: boolean }>,
+  activities: Array<{ date: Date; type: string; distanceM?: number | null; movingTimeSec?: number | null }> = [],
+): Promise<string> {
+  if (reflections.length === 0 && dailyLogs.length === 0 && activities.length === 0) {
     return "No data logged this week yet. Start journaling to see your weekly summary! 📝";
   }
 
@@ -280,7 +284,19 @@ export async function generateWeekSummary(reflections: Array<{ date: Date; journ
     .map(r => `${new Date(r.date).toLocaleDateString("en-IN", { weekday: "short", day: "numeric" })}: ${(r.journalText as string).slice(0, 200)}`)
     .join("\n");
 
-  const workoutDays = dailyLogs.filter(l => l.didWorkout).length;
+  // A workout day is one ticked in the daily log OR with a Strava session (walks don't count)
+  const istDay = (d: Date) => new Date(new Date(d).getTime() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const training = activities.filter(a => a.type !== "Walk");
+  const workoutDays = new Set([
+    ...dailyLogs.filter(l => l.didWorkout).map(l => istDay(l.date)),
+    ...training.map(a => istDay(a.date)),
+  ]).size;
+  const runs = training.filter(a => a.type === "Run" || a.type === "TrailRun");
+  const runKm = runs.reduce((s, a) => s + (a.distanceM ?? 0) / 1000, 0);
+  const otherTypes = [...new Set(training.filter(a => !runs.includes(a)).map(a => a.type))];
+  const trainingLine = training.length
+    ? `Strava: ${runs.length} run${runs.length === 1 ? "" : "s"}, ${runKm.toFixed(1)} km${otherTypes.length ? `; also ${otherTypes.join(", ")}` : ""}`
+    : "Strava: no sessions";
   const journalDays = dailyLogs.filter(l => l.didJournal).length;
   const avgMood = dailyLogs.filter(l => l.moodScore != null).length > 0
     ? (dailyLogs.reduce((s, l) => s + (l.moodScore ?? 0), 0) / dailyLogs.filter(l => l.moodScore != null).length).toFixed(1)
@@ -295,6 +311,7 @@ export async function generateWeekSummary(reflections: Array<{ date: Date; journ
         content: `Give Adwait a warm, personal weekly summary in 3-4 lines max. WhatsApp format (no markdown). Use his journal entries and stats below.
 
 Stats: ${workoutDays}/7 workout days, ${journalDays}/7 journal days, avg mood ${avgMood ?? "not logged"}/10
+${trainingLine}
 
 Journal entries this week:
 ${journalSummary || "No journal entries"}
@@ -304,6 +321,6 @@ Be specific, reference what he actually wrote. End with one forward-looking line
     });
     return (response.content[0] as { text: string }).text.trim();
   } catch {
-    return `Week recap 📊\n💪 Workouts: ${workoutDays}/7\n✍️ Journals: ${journalDays}/7\n😊 Avg mood: ${avgMood ?? "—"}/10`;
+    return `Week recap 📊\n💪 Workouts: ${workoutDays}/7 · ${trainingLine}\n✍️ Journals: ${journalDays}/7\n😊 Avg mood: ${avgMood ?? "—"}/10`;
   }
 }
