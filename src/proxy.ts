@@ -12,6 +12,7 @@ const PUBLIC = [
   /^\/api\/asana\/sync$/,
   /^\/api\/health-sync$/,
   /^\/api\/agent\/tool\/[a-z_]+$/, // ElevenAgents webhook tools (x-agent-key)
+  /^\/api\/gmail\/digest$/, // hourly scheduler (cron bearer)
 ];
 
 export function proxy(req: NextRequest) {

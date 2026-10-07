@@ -483,3 +483,32 @@ model AgentConversation {
   transcript     String                      // JSON [{role:"user"|"agent", text}]
   userLines      String?                     // what I said, joined — used for recall
 }
+
+// Google sign-in for Gmail (read-only) + Calendar. One row; replaces GOOGLE_REFRESH_TOKEN in env.
+model GoogleToken {
+  id           String   @id @default("default")
+  refreshToken String
+  scope        String?
+  email        String?
+  updatedAt    DateTime @updatedAt
+}
+
+// Inbox mail pulled from Gmail. Summarised into the hourly WhatsApp digest.
+model EmailMessage {
+  id         String    @id                 // Gmail message id
+  threadId   String
+  fromName   String?
+  fromEmail  String
+  subject    String
+  snippet    String
+  body       String?                       // plain text, trimmed
+  receivedAt DateTime
+  unread     Boolean   @default(true)
+  category   String?                       // "action" | "fyi" | "noise" — set by the digest
+  summary    String?                       // one line, set by the digest
+  digestedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([receivedAt])
+  @@index([digestedAt])
+}

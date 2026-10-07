@@ -1,16 +1,5 @@
 import { google } from "googleapis";
-
-function getOAuthClient() {
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID!,
-    process.env.GOOGLE_CLIENT_SECRET!,
-    "http://localhost:3001/oauth2callback"
-  );
-  oauth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN!,
-  });
-  return oauth2Client;
-}
+import { googleAuth } from "./google";
 
 export interface CalendarEventParams {
   title: string;
@@ -72,7 +61,8 @@ export async function createCalendarEvent(params: CalendarEventParams): Promise<
   const mmEnd = String(endTotalMin % 60).padStart(2, "0");
   const endIST = `${dateStr}T${hhEnd}:${mmEnd}:00+05:30`;
 
-  const auth = getOAuthClient();
+  const auth = await googleAuth(); // same sign-in as Gmail (stored in the database)
+  if (!auth) throw new Error("Google isn't connected — sign in at /api/google/connect");
   const calendar = google.calendar({ version: "v3", auth });
 
   try {

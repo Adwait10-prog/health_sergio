@@ -1,0 +1,19 @@
+# Hourly Gmail digest. Vercel's Hobby plan only runs crons once a day, so GitHub pings the app
+# instead; the app decides whether anything is worth sending (and stays quiet 22:00–08:00 IST).
+name: Gmail digest
+
+on:
+  schedule:
+    - cron: "30 * * * *" # every hour, on the hour IST (UTC+5:30). GitHub may run a few minutes late.
+  workflow_dispatch: {}
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ask the app to sync and summarise
+        run: |
+          curl -fsS --max-time 120 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://health-sergio.vercel.app/api/gmail/digest

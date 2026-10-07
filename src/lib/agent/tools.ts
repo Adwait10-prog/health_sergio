@@ -10,6 +10,7 @@ import { todayIST, type Ctx } from "../wa/context";
 import type { ParsedMessage } from "../whatsapp";
 import { buildBriefing } from "./briefing";
 import { patchDailyLog } from "../wa/store";
+import { gmailConnected, recentImportant, syncInbox } from "../gmail";
 import { createAsanaTaskFromWhatsApp, resolveProject, PROJECT_NAMES } from "../asanaWhatsapp";
 
 const HABITS = ["read", "meditate", "code", "learn", "network", "journal"] as const;
@@ -91,6 +92,17 @@ export const AGENT_TOOLS: AgentTool[] = [
       scope: str(a.scope) || "all",
       dateHint: str(a.date_hint) && str(a.date_hint) !== "none" ? str(a.date_hint) : null,
     }, str(a.question)),
+  },
+
+  {
+    name: "check_email",
+    description: "What's in his Gmail inbox that matters from the last 24 hours (already sorted: needs him / FYI; newsletters and notifications are dropped). Read-only — you can't send or reply to email.",
+    params: {},
+    run: async () => {
+      if (!(await gmailConnected())) return "Gmail isn't connected yet — he needs to sign in to Google from the app.";
+      await syncInbox().catch(() => {}); // fresh pull; fall back to what's stored
+      return recentImportant();
+    },
   },
 
   // ── Write ──
