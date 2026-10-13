@@ -14,7 +14,7 @@ function localKey(d: Date): string {
   return new Date(d.getTime() + 5.5 * 60 * 60 * 1000).toISOString().split("T")[0];
 }
 
-export const getPatternInsights = unstable_cache(
+const cachedPatternInsights = unstable_cache(
   async (userId: string): Promise<string> => {
     // Fetch last 30 days of data
     const since = new Date(new Date().getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -112,3 +112,14 @@ ${context}`,
     tags: ["pattern-insights"],
   }
 );
+
+// The insight is a nice-to-have: if Claude is unreachable (no credits, outage, timeout) the
+// Today page must still load. Failures aren't cached, so it recovers on the next request.
+export async function getPatternInsights(userId: string): Promise<string> {
+  try {
+    return await cachedPatternInsights(userId);
+  } catch (e) {
+    console.error("pattern insights unavailable:", e instanceof Error ? e.message.slice(0, 200) : e);
+    return "Coach insights are unavailable right now.";
+  }
+}
